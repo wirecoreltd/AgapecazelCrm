@@ -5,13 +5,23 @@ import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 function Logo() {
+  // Dépose ton fichier logo dans /public/logo.png (fond transparent conseillé, ~64x64px).
+  // Tant qu'il n'existe pas, ou si le chargement échoue, le badge "AC" s'affiche à la place.
+  const [logoOk, setLogoOk] = useState(true)
   return (
     <span className="flex items-center gap-2 text-white">
-      <span
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold"
-        style={{ background: 'var(--accent)' }}
-      >
-        AC
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg" style={{ background: logoOk ? 'transparent' : 'var(--accent)' }}>
+        {logoOk ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src="/logo.png"
+            alt="Agapecazel"
+            className="h-full w-full object-contain"
+            onError={() => setLogoOk(false)}
+          />
+        ) : (
+          <span className="text-sm font-bold">AC</span>
+        )}
       </span>
       <span className="text-[15px] font-semibold leading-none">Agapecazel</span>
     </span>
