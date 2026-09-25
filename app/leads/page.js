@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
+import StatusBadge from '@/components/StatusBadge'
 
 const STATUTS = ['nouveau', 'rdv_pris', 'devis', 'signe', 'installe', 'perdu']
 const STATUT_LABELS = { nouveau: 'Nouveau', rdv_pris: 'RDV pris', devis: 'Devis', signe: 'Signé', installe: 'Installé', perdu: 'Perdu' }
@@ -23,11 +24,13 @@ function StatutSelect({ value, onChange }) {
   return (
     <select
       className="w-full rounded-lg border-0 px-2.5 py-1.5 text-[12px] font-medium text-white"
-      style={{ background: `var(${STATUT_VARS[value] ?? '--status-nouveau'})` }}
+      style={{ background: `var(${STATUT_VARS[value] ?? '--status-nouveau'})`, colorScheme: 'light' }}
       value={value}
       onChange={onChange}
     >
-      {STATUTS.map((s) => <option key={s} value={s} style={{ color: 'black' }}>{STATUT_LABELS[s]}</option>)}
+      {STATUTS.map((s) => (
+        <option key={s} value={s} style={{ color: '#1e293b', background: '#ffffff' }}>{STATUT_LABELS[s]}</option>
+      ))}
     </select>
   )
 }
@@ -166,11 +169,16 @@ export default function Leads() {
                 <p className="font-mono-data mt-0.5 text-[13px]" style={{ color: 'var(--muted)' }}>{l.mobile || '—'}</p>
               </div>
               <div className="w-32 shrink-0">
-                <StatutSelect value={l.statut} onChange={(e) => maj(l.id, { statut: e.target.value })} />
+                {role === 'admin' ? (
+                  <StatutSelect value={l.statut} onChange={(e) => maj(l.id, { statut: e.target.value })} />
+                ) : (
+                  <StatusBadge statut={l.statut} />
+                )}
               </div>
             </div>
             <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px]" style={{ color: 'var(--muted)' }}>
               <span>Dernier appel : {derniersAppels[l.id] ?? '—'}</span>
+              <span>Installateur : {l.installateur || '—'}</span>
               <span>Installation : {fmtDate(l.date_installation)}</span>
             </div>
             <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: 'var(--border)' }}>
@@ -188,7 +196,7 @@ export default function Leads() {
         <table className="w-full text-left text-sm">
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {['Contact', 'Mobile', 'Dernier appel', 'Statut', 'Actions', "Date d'installation"].map((h) => (
+              {['Contact', 'Mobile', 'Dernier appel', 'Statut', 'Actions', 'Installateur', "Date d'installation"].map((h) => (
                 <th key={h} className="p-3 text-[13px] font-medium" style={{ color: 'var(--muted)' }}>{h}</th>
               ))}
             </tr>
@@ -200,16 +208,23 @@ export default function Leads() {
                 <td className="font-mono-data p-3 text-[13px]">{l.mobile}</td>
                 <td className="p-3" style={{ color: 'var(--muted)' }}>{derniersAppels[l.id] ?? '—'}</td>
                 <td className="p-3">
-                  <div className="w-36"><StatutSelect value={l.statut} onChange={(e) => maj(l.id, { statut: e.target.value })} /></div>
+                  <div className="w-36">
+                    {role === 'admin' ? (
+                      <StatutSelect value={l.statut} onChange={(e) => maj(l.id, { statut: e.target.value })} />
+                    ) : (
+                      <StatusBadge statut={l.statut} />
+                    )}
+                  </div>
                 </td>
                 <td className="p-3">
                   <RowActions l={l} role={role} uploadingId={uploadingId} docCounts={docCounts} onUpload={uploadRapide} onDelete={suppr} />
                 </td>
+                <td className="p-3" style={{ color: 'var(--muted)' }}>{l.installateur || '—'}</td>
                 <td className="p-3" style={{ color: 'var(--muted)' }}>{fmtDate(l.date_installation)}</td>
               </tr>
             ))}
             {!rows.length && (
-              <tr><td colSpan={6} className="p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun lead pour le moment.</td></tr>
+              <tr><td colSpan={7} className="p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun lead pour le moment.</td></tr>
             )}
           </tbody>
         </table>
