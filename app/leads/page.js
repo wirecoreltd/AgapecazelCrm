@@ -65,6 +65,7 @@ function RowActions({ l, role, uploadingId, docCounts, onUpload, onDelete }) {
 export default function Leads() {
   const [role, setRole] = useState(null)
   const [leads, setLeads] = useState([])
+  const [agentsMap, setAgentsMap] = useState({})
   const [derniersAppels, setDerniersAppels] = useState({})
   const [docCounts, setDocCounts] = useState({})
   const [filtre, setFiltre] = useState('')
@@ -79,6 +80,11 @@ export default function Leads() {
     const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false })
     if (error) setErr(error.message)
     setLeads(data ?? [])
+
+    if (p?.role === 'admin') {
+      const { data: agents } = await supabase.from('profiles').select('id, nom_complet').eq('role', 'agent')
+      setAgentsMap(Object.fromEntries((agents ?? []).map((a) => [a.id, a.nom_complet])))
+    }
 
     const { data: appels } = await supabase.from('lead_appels').select('lead_id, resultat, created_at').order('created_at', { ascending: false })
     const derniers = {}
@@ -178,6 +184,7 @@ export default function Leads() {
             </div>
             <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px]" style={{ color: 'var(--muted)' }}>
               <span>Dernier appel : {derniersAppels[l.id] ?? '—'}</span>
+              {role === 'admin' && <span>Agent : {agentsMap[l.agent_id] ?? '—'}</span>}
               <span>Installateur : {l.installateur || '—'}</span>
               <span>Installation : {fmtDate(l.date_installation)}</span>
             </div>
@@ -196,7 +203,7 @@ export default function Leads() {
         <table className="w-full text-left text-sm">
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {['Contact', 'Mobile', 'Dernier appel', 'Statut', 'Actions', 'Installateur', "Date d'installation"].map((h) => (
+              {['Contact', 'Mobile', 'Dernier appel', 'Statut', 'Actions', ...(role === 'admin' ? ['Agent'] : []), 'Installateur', "Date d'installation"].map((h) => (
                 <th key={h} className="p-3 text-[13px] font-medium" style={{ color: 'var(--muted)' }}>{h}</th>
               ))}
             </tr>
@@ -219,12 +226,13 @@ export default function Leads() {
                 <td className="p-3">
                   <RowActions l={l} role={role} uploadingId={uploadingId} docCounts={docCounts} onUpload={uploadRapide} onDelete={suppr} />
                 </td>
+                {role === 'admin' && <td className="p-3" style={{ color: 'var(--muted)' }}>{agentsMap[l.agent_id] ?? '—'}</td>}
                 <td className="p-3" style={{ color: 'var(--muted)' }}>{l.installateur || '—'}</td>
                 <td className="p-3" style={{ color: 'var(--muted)' }}>{fmtDate(l.date_installation)}</td>
               </tr>
             ))}
             {!rows.length && (
-              <tr><td colSpan={7} className="p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun lead pour le moment.</td></tr>
+              <tr><td colSpan={role === 'admin' ? 8 : 7} className="p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun lead pour le moment.</td></tr>
             )}
           </tbody>
         </table>
