@@ -38,18 +38,35 @@ const fmt = (v) => (v == null || v === '' ? '—' : v === true ? 'Oui' : v === f
 export default function ViewLead() {
   const { id } = useParams()
   const [lead, setLead] = useState(null)
+  const [role, setRole] = useState(null)
+  const [agentNom, setAgentNom] = useState(null)
   const [msg, setMsg] = useState('Chargement…')
 
   useEffect(() => { (async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      setRole(p?.role ?? null)
+    }
     const { data } = await supabase.from('leads').select('*').eq('id', id).single()
-    data ? setLead(data) : setMsg('Lead introuvable.')
+    if (!data) return setMsg('Lead introuvable.')
+    setLead(data)
+    if (data.agent_id) {
+      const { data: ag } = await supabase.from('profiles').select('nom_complet').eq('id', data.agent_id).single()
+      setAgentNom(ag?.nom_complet ?? null)
+    }
   })() }, [id])
 
   return (
     <AppShell
       backHref="/leads"
       title={lead ? `${lead.prenom ?? ''} ${lead.nom ?? ''}`.trim() || 'Lead' : 'Lead'}
-      subtitle={lead ? <StatusBadge statut={lead.statut} /> : undefined}
+      subtitle={lead ? (
+        <span className="flex flex-wrap items-center gap-2">
+          <StatusBadge statut={lead.statut} />
+          {role === 'admin' && <span>Agent associé : {agentNom ?? 'Aucun'}</span>}
+        </span>
+      ) : undefined}
       actions={lead && <Link href={`/leads/${id}/edit`} className="btn-accent">Modifier</Link>}
     >
       {lead ? (
