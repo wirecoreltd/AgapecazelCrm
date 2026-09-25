@@ -6,11 +6,21 @@ import { supabase } from '@/lib/supabase'
 
 const STATUTS = ['nouveau', 'rdv_pris', 'devis', 'signe', 'installe', 'perdu']
 
+function Badge({ count }) {
+  if (!count) return null
+  return (
+    <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">
+      {count}
+    </span>
+  )
+}
+
 export default function Leads() {
   const router = useRouter()
   const [role, setRole] = useState(null)
   const [leads, setLeads] = useState([])
   const [derniersAppels, setDerniersAppels] = useState({})
+  const [docCounts, setDocCounts] = useState({})
   const [filtre, setFiltre] = useState('')
   const [err, setErr] = useState('')
   const [uploadingId, setUploadingId] = useState(null)
@@ -22,10 +32,16 @@ export default function Leads() {
     const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false })
     if (error) setErr(error.message)
     setLeads(data ?? [])
+
     const { data: appels } = await supabase.from('lead_appels').select('lead_id, resultat, created_at').order('created_at', { ascending: false })
     const derniers = {}
     for (const a of appels ?? []) if (!derniers[a.lead_id]) derniers[a.lead_id] = a.resultat
     setDerniersAppels(derniers)
+
+    const { data: docs } = await supabase.from('lead_documents').select('lead_id')
+    const comptes = {}
+    for (const d of docs ?? []) comptes[d.lead_id] = (comptes[d.lead_id] ?? 0) + 1
+    setDocCounts(comptes)
   }
   useEffect(() => { load() }, [])
 
@@ -54,7 +70,8 @@ export default function Leads() {
       lead_id: leadId, nom_fichier: file.name, storage_path: path, uploaded_by: user.id,
     })
     setUploadingId(null); e.target.value = ''
-    if (error) setErr(error.message)
+    if (error) return setErr(error.message)
+    setDocCounts((d) => ({ ...d, [leadId]: (d[leadId] ?? 0) + 1 }))
   }
   const logout = async () => { await supabase.auth.signOut(); router.push('/login'); router.refresh() }
   const rows = leads.filter((l) => !filtre || l.statut === filtre)
@@ -91,14 +108,19 @@ export default function Leads() {
                     {STATUTS.map((s) => <option key={s}>{s}</option>)}
                   </select>
                 </td>
-                <td className="space-x-3 whitespace-nowrap p-3">
-                  <Link href={`/leads/${l.id}`} className="underline">Voir</Link>
-                  <Link href={`/leads/${l.id}/edit`} className="underline">Modifier</Link>
-                  <label className="cursor-pointer underline">
-                    {uploadingId === l.id ? 'Envoi…' : 'Document'}
-                    <input type="file" className="hidden" disabled={uploadingId === l.id} onChange={(e) => uploadRapide(l.id, e)} />
-                  </label>
-                  {role === 'admin' && <button onClick={() => suppr(l)} className="text-red-700 underline">Supprimer</button>}
+                <td className="p-3">
+                  <div className="flex items-center gap-3">
+                    <Link href={`/leads/${l.id}`} title="Voir" className="text-lg leading-none">👁️</Link>
+                    <Link href={`/leads/${l.id}/edit`} title="Modifier" className="text-lg leading-none">✏️</Link>
+                    <label className="relative cursor-pointer text-lg leading-none" title="Ajouter un document">
+                      {uploadingId === l.id ? '⏳' : '📎'}
+                      <Badge count={docCounts[l.id]} />
+                      <input type="file" className="hidden" disabled={uploadingId === l.id} onChange={(e) => uploadRapide(l.id, e)} />
+                    </label>
+                    {role === 'admin' && (
+                      <button onClick={() => suppr(l)} title="Supprimer" className="text-lg leading-none">🗑️</button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
