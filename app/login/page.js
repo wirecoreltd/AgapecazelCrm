@@ -15,14 +15,41 @@ export default function Login() {
     window.location.href = '/leads'
   }
   return (
-    <main className="mx-auto mt-24 max-w-sm p-6">
-      <h1 className="mb-6 text-2xl font-bold">Connexion</h1>
-      <form onSubmit={submit} className="space-y-4">
-        <input name="email" type="email" required placeholder="Email" className="inp" />
-        <input name="password" type="password" required placeholder="Mot de passe" className="inp" />
-        {err && <p className="text-sm text-red-600">{err}</p>}
-        <button disabled={busy} className="btn w-full">{busy ? 'Connexion…' : 'Se connecter'}</button>
-      </form>
-    </main>
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: 'var(--ink)' }}>
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <span
+            className="flex h-12 w-12 items-center justify-center rounded-xl text-base font-bold text-white"
+            style={{ background: 'var(--accent)' }}
+          >
+            AC
+          </span>
+          <div className="text-center">
+            <h1 className="text-lg font-semibold text-white">Agapecazel CRM</h1>
+            <p className="mt-0.5 text-sm text-white/60">Suivi des leads pompes à chaleur</p>
+          </div>
+        </div>
+
+        <div className="card p-6 sm:p-7">
+          <h2 className="mb-5 text-base font-semibold" style={{ color: 'var(--ink)' }}>Connexion</h2>
+          <form onSubmit={submit} className="space-y-4">
+            <div>
+              <label className="field-label" htmlFor="email">Email</label>
+              <input id="email" name="email" type="email" required placeholder="vous@exemple.com" className="inp" autoComplete="username" />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="password">Mot de passe</label>
+              <input id="password" name="password" type="password" required placeholder="••••••••" className="inp" autoComplete="current-password" />
+            </div>
+            {err && (
+              <p className="rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
+                {err}
+              </p>
+            )}
+            <button disabled={busy} className="btn-accent w-full">{busy ? 'Connexion…' : 'Se connecter'}</button>
+          </form>
+        </div>
+      </div>
+    </div>
   )
 }
