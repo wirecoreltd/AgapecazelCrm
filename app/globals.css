@@ -1,6 +1,0 @@
-@import "tailwindcss";
-body { @apply bg-slate-50 text-slate-900; font-family: system-ui, sans-serif; }
-@layer components {
-  .inp { @apply w-full rounded border border-slate-300 bg-white px-3 py-2 focus:outline-2 focus:outline-teal-600; }
-  .btn { @apply rounded bg-teal-700 px-4 py-2 text-white hover:bg-teal-800 disabled:opacity-50; }
-}
