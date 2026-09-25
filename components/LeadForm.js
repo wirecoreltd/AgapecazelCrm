@@ -146,7 +146,7 @@ export default function LeadForm({ lead }) {
         <Select name="proprietaire" label="Propriétaire" required value={yn(lead?.proprietaire)} options={OUI_NON} />
         <Field name="nb_personnes" label="Nb de personnes" required type="number" value={lead?.nb_personnes} />
         <Field name="revenus" label="Revenus" value={lead?.revenus} />
-        <Select name="maison_plus_15_ans" label="Maison +15 ans" required value={yn(lead?.maison_plus_15_ans)} options={OUI_NON} />
+        <Select name="maison_plus_15_ans" label="Maison +15 ans" value={yn(lead?.maison_plus_15_ans)} options={OUI_NON} />
         <Select name="type_habitat" label="Type d'habitat" required value={lead?.type_habitat} options={[['maison', 'Maison'], ['appartement', 'Appartement']]} />
         <Field name="surface_habitable" label="Surface habitable (m²)" required type="number" value={lead?.surface_habitable} />
         <Select name="chauffage" label="Type de chauffage" required value={lead?.chauffage} options={CHAUFFAGES} />
@@ -154,7 +154,7 @@ export default function LeadForm({ lead }) {
 
       <Section title="Projet">
         <Field name="produit_1" label="Produit 1" value={lead?.produit_1} />
-        <Select name="documents_requis" label="Documents à récupérer" required value={yn(lead?.documents_requis)} options={OUI_NON} />
+        <Select name="documents_requis" label="Documents récupérer" value={yn(lead?.documents_requis)} options={OUI_NON} />
 
         <div className="sm:col-span-2">
           <span className="field-label">Installateur</span>
