@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 const STATUTS = ['nouveau', 'rdv_pris', 'devis', 'signe', 'installe', 'perdu']
+const isAllowed = (file) => file.type === 'application/pdf' || file.type.startsWith('image/')
+const fmtDate = (v) => (v ? new Date(v).toLocaleDateString('fr-FR') : '—')
 
 function Badge({ count }) {
   if (!count) return null
@@ -60,7 +62,9 @@ export default function Leads() {
   }
   const uploadRapide = async (leadId, e) => {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
+    if (!isAllowed(file)) { setErr('Seuls les PDF et les photos sont acceptés.'); return }
     setUploadingId(leadId); setErr('')
     const path = `${leadId}/${Date.now()}_${file.name}`
     const { error: upErr } = await supabase.storage.from('documents').upload(path, file)
@@ -69,7 +73,7 @@ export default function Leads() {
     const { error } = await supabase.from('lead_documents').insert({
       lead_id: leadId, nom_fichier: file.name, storage_path: path, uploaded_by: user.id,
     })
-    setUploadingId(null); e.target.value = ''
+    setUploadingId(null)
     if (error) return setErr(error.message)
     setDocCounts((d) => ({ ...d, [leadId]: (d[leadId] ?? 0) + 1 }))
   }
@@ -92,16 +96,13 @@ export default function Leads() {
       <div className="overflow-x-auto rounded border bg-white">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-100">
-            <tr>{['Contact', 'Ville', 'Mobile', 'Chauffage', 'Surface', 'Dernier appel', 'Statut', 'Actions'].map((h) => <th key={h} className="p-3">{h}</th>)}</tr>
+            <tr>{['Contact', 'Mobile', 'Dernier appel', 'Statut', 'Actions', 'Date installation'].map((h) => <th key={h} className="p-3">{h}</th>)}</tr>
           </thead>
           <tbody>
             {rows.map((l) => (
               <tr key={l.id} className="border-t">
                 <td className="p-3">{l.civilite} {l.prenom} {l.nom}</td>
-                <td className="p-3">{l.code_postal} {l.ville}</td>
                 <td className="p-3">{l.mobile}</td>
-                <td className="p-3">{l.chauffage}</td>
-                <td className="p-3">{l.surface_habitable} m²</td>
                 <td className="p-3">{derniersAppels[l.id] ?? '—'}</td>
                 <td className="p-3">
                   <select className="inp" value={l.statut} onChange={(e) => maj(l.id, { statut: e.target.value })}>
@@ -112,19 +113,20 @@ export default function Leads() {
                   <div className="flex items-center gap-3">
                     <Link href={`/leads/${l.id}`} title="Voir" className="text-lg leading-none">👁️</Link>
                     <Link href={`/leads/${l.id}/edit`} title="Modifier" className="text-lg leading-none">✏️</Link>
-                    <label className="relative cursor-pointer text-lg leading-none" title="Ajouter un document">
+                    <label className="relative cursor-pointer text-lg leading-none" title="Ajouter un document (PDF ou photo)">
                       {uploadingId === l.id ? '⏳' : '📎'}
                       <Badge count={docCounts[l.id]} />
-                      <input type="file" className="hidden" disabled={uploadingId === l.id} onChange={(e) => uploadRapide(l.id, e)} />
+                      <input type="file" accept="application/pdf,image/*" className="hidden" disabled={uploadingId === l.id} onChange={(e) => uploadRapide(l.id, e)} />
                     </label>
                     {role === 'admin' && (
                       <button onClick={() => suppr(l)} title="Supprimer" className="text-lg leading-none">🗑️</button>
                     )}
                   </div>
                 </td>
+                <td className="p-3">{fmtDate(l.date_installation)}</td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan={8} className="p-6 text-center text-slate-500">Aucun lead pour le moment.</td></tr>}
+            {!rows.length && <tr><td colSpan={6} className="p-6 text-center text-slate-500">Aucun lead pour le moment.</td></tr>}
           </tbody>
         </table>
       </div>
