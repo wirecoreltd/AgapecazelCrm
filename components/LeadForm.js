@@ -100,6 +100,10 @@ export default function LeadForm({ lead }) {
         </label>
       </div>
 
+      <label className="block text-sm font-medium">Date d'installation
+        <input name="date_installation" type="date" defaultValue={lead?.date_installation ?? ''} className="inp mt-1 font-normal" />
+      </label>
+
       <label className="block text-sm font-medium sm:col-span-2">Commentaire
         <textarea name="commentaire" rows={3} defaultValue={lead?.commentaire ?? ''} className="inp mt-1 font-normal" />
       </label>
