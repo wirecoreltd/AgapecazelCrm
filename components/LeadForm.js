@@ -44,18 +44,45 @@ export default function LeadForm({ lead }) {
   const router = useRouter()
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
+  const [role, setRole] = useState(null)
+  const [agents, setAgents] = useState([])
   const [installateurs, setInstallateurs] = useState([])
+  const [installateurChoisi, setInstallateurChoisi] = useState(lead?.installateur ?? '')
+  const [nouvelInstallateur, setNouvelInstallateur] = useState('')
 
   useEffect(() => {
     supabase.from('installateurs').select('nom').order('nom').then(({ data }) => setInstallateurs(data ?? []))
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      setRole(p?.role ?? null)
+      if (p?.role === 'admin') {
+        const { data: ag } = await supabase.from('profiles').select('id, nom_complet').eq('role', 'agent').order('nom_complet')
+        setAgents(ag ?? [])
+      }
+    })()
   }, [])
+
+  const ajouterInstallateur = async () => {
+    const nom = nouvelInstallateur.trim()
+    if (!nom) return
+    await supabase.from('installateurs').insert({ nom })
+    // l'erreur (nom déjà existant) est volontairement ignorée
+    setInstallateurs((liste) => (
+      liste.some((i) => i.nom === nom) ? liste : [...liste, { nom }].sort((a, b) => a.nom.localeCompare(b.nom))
+    ))
+    setInstallateurChoisi(nom)
+    setNouvelInstallateur('')
+  }
 
   const submit = async (e) => {
     e.preventDefault(); setBusy(true); setMsg('')
     const form = e.target
     const raw = Object.fromEntries(new FormData(form))
-    const memoriser = raw.memoriser_installateur === 'on'
-    const f = Object.fromEntries(Object.entries(raw).filter(([k]) => k !== 'memoriser_installateur').map(([k, v]) => [k, v === '' ? null : v]))
+    const f = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, v === '' ? null : v]))
+    const { data: { user } } = await supabase.auth.getUser()
+
     const data = {
       ...f,
       proprietaire: f.proprietaire === 'oui',
@@ -63,10 +90,14 @@ export default function LeadForm({ lead }) {
       documents_requis: f.documents_requis ? f.documents_requis === 'oui' : null,
     }
 
-    if (memoriser && f.installateur) {
-      await supabase.from('installateurs').insert({ nom: f.installateur })
-      // l'erreur (nom déjà existant) est volontairement ignorée
+    if (role === 'admin') {
+      // L'admin choisit explicitement l'agent à qui associer le lead
+      data.agent_id = f.agent_id ?? null
+    } else if (!lead) {
+      // Un agent qui crée un lead se l'associe automatiquement
+      data.agent_id = user.id
     }
+    // Sinon (agent qui modifie un lead existant) : on ne touche pas à l'agent déjà assigné
 
     if (lead) {
       const { error } = await supabase.from('leads').update(data).eq('id', lead.id)
@@ -75,7 +106,6 @@ export default function LeadForm({ lead }) {
       return router.push(`/leads/${lead.id}`)
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
     const newId = crypto.randomUUID()
     const { error } = await supabase.from('leads').insert({ id: newId, ...data, statut: 'nouveau', created_by: user.id })
     setBusy(false)
@@ -91,6 +121,17 @@ export default function LeadForm({ lead }) {
         <Field name="prenom" label="Prénom" value={lead?.prenom} />
         <Field name="nom" label="Nom" value={lead?.nom} />
       </Section>
+
+      {role === 'admin' && (
+        <Section title="Attribution">
+          <Select
+            name="agent_id"
+            label="Agent associé"
+            value={lead?.agent_id}
+            options={agents.map((a) => [a.id, a.nom_complet])}
+          />
+        </Section>
+      )}
 
       <Section title="Coordonnées">
         <Field name="adresse" label="Adresse (rue et ville)" required value={lead?.adresse} />
@@ -117,14 +158,33 @@ export default function LeadForm({ lead }) {
 
         <div className="sm:col-span-2">
           <span className="field-label">Installateur</span>
-          <input name="installateur" list="installateurs-list" defaultValue={lead?.installateur ?? ''} className="inp" placeholder="Saisir ou choisir dans la liste" />
-          <datalist id="installateurs-list">
-            {installateurs.map((i) => <option key={i.nom} value={i.nom} />)}
-          </datalist>
-          <label className="mt-2 flex items-center gap-2 text-sm" style={{ color: 'var(--muted)' }}>
-            <input type="checkbox" name="memoriser_installateur" defaultChecked />
-            Se souvenir de cet installateur pour la prochaine fois
-          </label>
+          <select
+            name="installateur"
+            value={installateurChoisi}
+            onChange={(e) => setInstallateurChoisi(e.target.value)}
+            className="inp"
+          >
+            <option value="">Aucun</option>
+            {installateurs.map((i) => <option key={i.nom} value={i.nom}>{i.nom}</option>)}
+          </select>
+
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            <input
+              value={nouvelInstallateur}
+              onChange={(e) => setNouvelInstallateur(e.target.value)}
+              placeholder="Nom d'un nouvel installateur"
+              className="inp"
+            />
+            <button
+              type="button"
+              onClick={ajouterInstallateur}
+              disabled={!nouvelInstallateur.trim()}
+              className="btn-ghost shrink-0"
+              style={{ border: '1px solid var(--border-strong)' }}
+            >
+              Ajouter à la liste
+            </button>
+          </div>
         </div>
 
         <label className="block">
