@@ -11,11 +11,8 @@ export default function EditLead() {
   const [msg, setMsg] = useState('Chargement…')
 
   useEffect(() => { (async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (p?.role === 'branch') return setMsg('La modification est réservée au call center.')
-    const { data } = await supabase.from('leads').select('*').eq('id', id).single()
-    data ? setLead(data) : setMsg('Lead introuvable.')
+    const { data, error } = await supabase.from('leads').select('*').eq('id', id).single()
+    data ? setLead(data) : setMsg(error?.message ?? 'Lead introuvable.')
   })() }, [id])
 
   return (
