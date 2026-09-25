@@ -1,4 +1,4 @@
-rimport { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req) {
   const { email, password, nom_complet, role, accessToken } = await req.json()
