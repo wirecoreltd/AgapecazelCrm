@@ -14,6 +14,7 @@ const ROWS = [
   ['type_habitat', "Type d'habitat"], ['surface_habitable', 'Surface habitable (m²)'],
   ['chauffage', 'Type de chauffage'], ['produit_1', 'Produit 1'],
   ['documents_requis', 'Documents à récupérer'], ['installateur', 'Installateur'],
+  ['date_installation', "Date d'installation"],
   ['statut', 'Statut'], ['commentaire', 'Commentaire'],
 ]
 const fmt = (v) => (v == null || v === '' ? '—' : v === true ? 'Oui' : v === false ? 'Non' : v)
