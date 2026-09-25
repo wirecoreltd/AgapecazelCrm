@@ -25,13 +25,15 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-    ;(async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-      setRole(p?.role ?? null)
-    })()
-  }, [])
+  ;(async () => {
+    const { data: { user }, error: userErr } = await supabase.auth.getUser()
+    if (userErr) { console.error('AppShell auth.getUser error:', userErr); return }
+    if (!user) return
+    const { data: p, error: profileErr } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (profileErr) { console.error('AppShell profiles fetch error:', profileErr); return }
+    setRole(p?.role ?? null)
+  })()
+}, [])
 
   const logout = async () => {
     await supabase.auth.signOut()
