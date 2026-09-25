@@ -67,7 +67,7 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 shadow-sm" style={{ background: 'var(--ink)' }}>
+      <header className="sticky top-0 z-30 shadow-sm" style={{ background: 'var(--ink)', borderBottom: '3px solid var(--accent)' }}>
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3 sm:px-6">
           <Link href="/leads" className="mr-2">
             <Logo />
