@@ -35,16 +35,25 @@ function StatutSelect({ value, onChange }) {
   )
 }
 
+function MetaItem({ label, value }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{label}</dt>
+      <dd className="mt-0.5 truncate text-[13px] font-medium" style={{ color: 'var(--ink)' }} title={value}>{value}</dd>
+    </div>
+  )
+}
+
 function RowActions({ l, role, uploadingId, docCounts, onUpload, onDelete }) {
   return (
     <div className="flex items-center gap-3">
-      <Link href={`/leads/${l.id}`} title="Voir" className="text-[var(--ink)] opacity-70 hover:opacity-100">
+      <Link href={`/leads/${l.id}`} title="Voir" className="opacity-75 transition-opacity hover:opacity-100" style={{ color: 'var(--ink)' }}>
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M1 10s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.4" /></svg>
       </Link>
-      <Link href={`/leads/${l.id}/edit`} title="Modifier" className="text-[var(--ink)] opacity-70 hover:opacity-100">
+      <Link href={`/leads/${l.id}/edit`} title="Modifier" className="opacity-80 transition-opacity hover:opacity-100" style={{ color: 'var(--accent)' }}>
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M13.5 3.5l3 3L6 17H3v-3L13.5 3.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /></svg>
       </Link>
-      <label className="relative cursor-pointer text-[var(--ink)] opacity-70 hover:opacity-100" title="Ajouter un document (PDF ou photo)">
+      <label className="relative cursor-pointer opacity-80 transition-opacity hover:opacity-100" style={{ color: 'var(--success)' }} title="Ajouter un document (PDF ou photo)">
         {uploadingId === l.id ? (
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none" className="animate-spin"><path d="M10 3a7 7 0 1 1-7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
         ) : (
@@ -54,7 +63,7 @@ function RowActions({ l, role, uploadingId, docCounts, onUpload, onDelete }) {
         <input type="file" accept="application/pdf,image/*" className="hidden" disabled={uploadingId === l.id} onChange={(e) => onUpload(l.id, e)} />
       </label>
       {role === 'admin' && (
-        <button onClick={() => onDelete(l)} title="Supprimer" className="text-[var(--danger)] opacity-70 hover:opacity-100">
+        <button onClick={() => onDelete(l)} title="Supprimer" className="opacity-75 transition-opacity hover:opacity-100" style={{ color: 'var(--danger)' }}>
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4h4v2m-7 0 .7 10a1 1 0 0 0 1 1h5.6a1 1 0 0 0 1-1L14 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
       )}
@@ -168,10 +177,14 @@ export default function Leads() {
       {/* Mobile : cartes empilées */}
       <div className="flex flex-col gap-3 sm:hidden">
         {rows.map((l) => (
-          <div key={l.id} className="card p-4">
+          <div
+            key={l.id}
+            className="card overflow-hidden rounded-xl p-4"
+            style={{ borderLeft: `4px solid var(${STATUT_VARS[l.statut] ?? '--status-nouveau'})` }}
+          >
             <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <p className="font-semibold" style={{ color: 'var(--ink)' }}>{l.civilite} {l.prenom} {l.nom}</p>
+              <div className="min-w-0">
+                <p className="truncate font-semibold" style={{ color: 'var(--ink)' }}>{l.civilite} {l.prenom} {l.nom}</p>
                 <p className="font-mono-data mt-0.5 text-[13px]" style={{ color: 'var(--muted)' }}>{l.mobile || '—'}</p>
               </div>
               <div className="w-32 shrink-0">
@@ -182,12 +195,12 @@ export default function Leads() {
                 )}
               </div>
             </div>
-            <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px]" style={{ color: 'var(--muted)' }}>
-              <span>Dernier appel : {derniersAppels[l.id] ?? '—'}</span>
-              {role === 'admin' && <span>Agent : {agentsMap[l.agent_id] ?? '—'}</span>}
-              <span>Installateur : {l.installateur || '—'}</span>
-              <span>Installation : {fmtDate(l.date_installation)}</span>
-            </div>
+            <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg p-2.5" style={{ background: 'var(--surface)' }}>
+              <MetaItem label="Dernier appel" value={derniersAppels[l.id] ?? '—'} />
+              {role === 'admin' && <MetaItem label="Agent" value={agentsMap[l.agent_id] ?? '—'} />}
+              <MetaItem label="Installateur" value={l.installateur || '—'} />
+              <MetaItem label="Installation" value={fmtDate(l.date_installation)} />
+            </dl>
             <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: 'var(--border)' }}>
               <RowActions l={l} role={role} uploadingId={uploadingId} docCounts={docCounts} onUpload={uploadRapide} onDelete={suppr} />
             </div>
@@ -202,16 +215,22 @@ export default function Leads() {
       <div className="hidden overflow-x-auto sm:block card">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+            <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
               {['Contact', 'Mobile', 'Dernier appel', 'Statut', 'Actions', ...(role === 'admin' ? ['Agent'] : []), 'Installateur', "Date d'installation"].map((h) => (
                 <th key={h} className="p-3 text-[13px] font-medium" style={{ color: 'var(--muted)' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((l) => (
-              <tr key={l.id} className="transition-colors hover:bg-black/[0.02]" style={{ borderTop: '1px solid var(--border)' }}>
-                <td className="p-3 font-medium">{l.civilite} {l.prenom} {l.nom}</td>
+            {rows.map((l, i) => (
+              <tr
+                key={l.id}
+                className="transition-colors hover:bg-black/[0.03]"
+                style={{ borderTop: '1px solid var(--border)', background: i % 2 ? 'rgba(0,0,0,0.012)' : 'transparent' }}
+              >
+                <td className="p-3 font-medium" style={{ borderLeft: `3px solid var(${STATUT_VARS[l.statut] ?? '--status-nouveau'})` }}>
+                  {l.civilite} {l.prenom} {l.nom}
+                </td>
                 <td className="font-mono-data p-3 text-[13px]">{l.mobile}</td>
                 <td className="p-3" style={{ color: 'var(--muted)' }}>{derniersAppels[l.id] ?? '—'}</td>
                 <td className="p-3">
