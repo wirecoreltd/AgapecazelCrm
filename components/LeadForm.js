@@ -83,11 +83,29 @@ export default function LeadForm({ lead }) {
     const f = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, v === '' ? null : v]))
 
     // Règle : au moins un des deux (mobile OU téléphone 1) doit être rempli
-    const mobileOk = !!f.mobile?.trim()
-    const tel1Ok = !!f.telephone_1?.trim()
-    if (!mobileOk && !tel1Ok) {
+    if (!f.mobile?.trim() && !f.telephone_1?.trim()) {
       setBusy(false)
       return setMsg('Renseignez au moins un numéro : mobile ou téléphone 1.')
+    }
+
+    // Vérification des doublons par téléphone (mobile, tél 1 et tél 2)
+    const numeros = [f.mobile, f.telephone_1, f.telephone_2].filter((n) => n?.trim())
+    const { data: dup, error: dupErr } = await supabase.rpc('find_phone_duplicate', {
+      p_numbers: numeros,
+      p_exclude: lead?.id ? String(lead.id) : null,
+    })
+    if (dupErr) {
+      setBusy(false)
+      return setMsg(`Erreur : ${dupErr.message}`)
+    }
+    if (dup?.length) {
+      const d = dup[0]
+      const nomExistant = `${d.prenom ?? ''} ${d.nom ?? ''}`.trim() || 'sans nom'
+      setBusy(false)
+      return setMsg(
+        `Doublon : ce numéro existe déjà pour le lead « ${nomExistant} »` +
+        (role === 'admin' && d.agent_nom ? ` (agent : ${d.agent_nom})` : '') + '.'
+      )
     }
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -149,7 +167,7 @@ export default function LeadForm({ lead }) {
         <Field name="mobile" label="Mobile" value={lead?.mobile} />
         <Field name="telephone_1" label="Téléphone 1" value={lead?.telephone_1} />
         <Field name="telephone_2" label="Téléphone 2" value={lead?.telephone_2} />
-        <p className="text-xs sm:col-span-2" style={{ color: 'var(--muted, #6b7280)' }}>
+        <p className="text-xs sm:col-span-2" style={{ color: 'var(--muted)' }}>
           * Renseignez au moins un numéro : mobile ou téléphone 1.
         </p>
       </Section>
