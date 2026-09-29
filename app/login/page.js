@@ -29,7 +29,7 @@ export default function Login() {
           />
           <div className="text-center">
             <h1 className="text-lg font-semibold text-white">Agapecazel CRM</h1>
-            <p className="mt-0.5 text-sm text-white/60">Suivi des leads pompes à chaleur</p>
+            <p className="mt-0.5 text-sm text-white/60">Suivi Des Leads</p>
           </div>
         </div>
 
