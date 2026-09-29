@@ -21,4 +21,7 @@ export async function middleware(req) {
   if (user && onLogin) return NextResponse.redirect(new URL('/leads', req.url))
   return res
 }
-export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'] }
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|gif|ico)$).*)'],
+}
