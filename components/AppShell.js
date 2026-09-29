@@ -32,18 +32,24 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
   const router = useRouter()
   const pathname = usePathname()
   const [role, setRole] = useState(null)
+  const [nom, setNom] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-  ;(async () => {
-    const { data: { user }, error: userErr } = await supabase.auth.getUser()
-    if (userErr) { console.error('AppShell auth.getUser error:', userErr); return }
-    if (!user) return
-    const { data: p, error: profileErr } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (profileErr) { console.error('AppShell profiles fetch error:', profileErr); return }
-    setRole(p?.role ?? null)
-  })()
-}, [])
+    ;(async () => {
+      const { data: { user }, error: userErr } = await supabase.auth.getUser()
+      if (userErr) { console.error('AppShell auth.getUser error:', userErr); return }
+      if (!user) return
+      const { data: p, error: profileErr } = await supabase
+        .from('profiles')
+        .select('role, nom_complet')
+        .eq('id', user.id)
+        .single()
+      if (profileErr) { console.error('AppShell profiles fetch error:', profileErr); return }
+      setRole(p?.role ?? null)
+      setNom(p?.nom_complet || user.email || '')
+    })()
+  }, [])
 
   const logout = async () => {
     await supabase.auth.signOut()
@@ -76,12 +82,22 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
             {navLink('/leads', 'Leads')}
             {role === 'admin' && navLink('/admin', 'Espace admin')}
           </nav>
-          <button
-            onClick={logout}
-            className="ml-auto hidden rounded-lg px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 sm:block"
-          >
-            Déconnexion
-          </button>
+
+          {/* Desktop : Déconnexion + nom en dessous */}
+          <div className="ml-auto hidden flex-col items-end sm:flex">
+            <button
+              onClick={logout}
+              className="rounded-lg px-3 py-1 text-sm font-medium text-white/80 transition-colors hover:bg-white/10"
+            >
+              Déconnexion
+            </button>
+            {nom && (
+              <p className="mt-0.5 max-w-[200px] truncate px-3 text-xs text-white/60" title={nom}>
+                {nom}
+              </p>
+            )}
+          </div>
+
           <button
             onClick={() => setMenuOpen((o) => !o)}
             aria-label="Ouvrir le menu"
@@ -101,6 +117,9 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
               <Link href="/admin" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Espace admin</Link>
             )}
             <button onClick={logout} className="rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/70 hover:bg-white/10">Déconnexion</button>
+            {nom && (
+              <p className="truncate px-3 text-xs text-white/50" title={nom}>{nom}</p>
+            )}
           </div>
         )}
       </header>
