@@ -20,7 +20,7 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3">
           <Image
-            src="/logoAG.png"
+            src="/logo.png"
             alt="Agapecazel"
             width={80}
             height={80}
