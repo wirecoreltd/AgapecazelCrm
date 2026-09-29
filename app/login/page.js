@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 
 export default function Login() {
@@ -18,12 +19,14 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center px-4" style={{ background: 'var(--ink)' }}>
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3">
-          <span
-            className="flex h-12 w-12 items-center justify-center rounded-xl text-base font-bold text-white"
-            style={{ background: 'var(--accent)' }}
-          >
-            AC
-          </span>
+          <Image
+            src="/logoAG.png"
+            alt="Agapecazel"
+            width={80}
+            height={80}
+            priority
+            className="h-20 w-20 rounded-full object-cover"
+          />
           <div className="text-center">
             <h1 className="text-lg font-semibold text-white">Agapecazel CRM</h1>
             <p className="mt-0.5 text-sm text-white/60">Suivi des leads pompes à chaleur</p>
