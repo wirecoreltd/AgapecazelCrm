@@ -182,36 +182,38 @@ export default function LeadForm({ lead }) {
         <Field name="produit_1" label="Produit 1" value={lead?.produit_1} />
         <Select name="documents_requis" label="Documents récupérer" value={yn(lead?.documents_requis)} options={OUI_NON} />
 
-        <div className="sm:col-span-2">
-          <span className="field-label">Installateur</span>
-          <select
-            name="installateur"
-            value={installateurChoisi}
-            onChange={(e) => setInstallateurChoisi(e.target.value)}
-            className="inp"
-          >
-            <option value="">Aucun</option>
-            {installateurs.map((i) => <option key={i.nom} value={i.nom}>{i.nom}</option>)}
-          </select>
+        {role === 'admin' && (
+  <div className="sm:col-span-2">
+    <span className="field-label">Installateur</span>
+    <select
+      name="installateur"
+      value={installateurChoisi}
+      onChange={(e) => setInstallateurChoisi(e.target.value)}
+      className="inp"
+    >
+      <option value="">Aucun</option>
+      {installateurs.map((i) => <option key={i.nom} value={i.nom}>{i.nom}</option>)}
+    </select>
 
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-            <input
-              value={nouvelInstallateur}
-              onChange={(e) => setNouvelInstallateur(e.target.value)}
-              placeholder="Nom d'un nouvel installateur"
-              className="inp"
-            />
-            <button
-              type="button"
-              onClick={ajouterInstallateur}
-              disabled={!nouvelInstallateur.trim()}
-              className="btn-ghost shrink-0"
-              style={{ border: '1px solid var(--border-strong)' }}
-            >
-              Ajouter à la liste
-            </button>
-          </div>
-        </div>
+    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+      <input
+        value={nouvelInstallateur}
+        onChange={(e) => setNouvelInstallateur(e.target.value)}
+        placeholder="Nom d'un nouvel installateur"
+        className="inp"
+      />
+      <button
+        type="button"
+        onClick={ajouterInstallateur}
+        disabled={!nouvelInstallateur.trim()}
+        className="btn-ghost shrink-0"
+        style={{ border: '1px solid var(--border-strong)' }}
+      >
+        Ajouter à la liste
+      </button>
+    </div>
+  </div>
+)}
 
         <label className="block">
           <span className="field-label">Date d'installation</span>
