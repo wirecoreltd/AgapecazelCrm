@@ -84,6 +84,7 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
           <nav className="ml-2 hidden items-center gap-1 sm:flex">
             {navLink('/leads', 'Leads')}
             {role === 'admin' && navLink('/admin', 'Espace admin')}
+            {role === 'admin' && navLink('/logs', 'Historique')}
           </nav>
 
           {/* Desktop : Déconnexion + nom (or) en dessous */}
@@ -122,6 +123,9 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
             <Link href="/leads" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Leads</Link>
             {role === 'admin' && (
               <Link href="/admin" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Espace admin</Link>
+            )}
+            {role === 'admin' && (
+              <Link href="/logs" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Historique</Link>
             )}
             <button onClick={logout} className="rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/70 hover:bg-white/10">Déconnexion</button>
             {nom && (
