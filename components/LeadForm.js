@@ -81,6 +81,11 @@ export default function LeadForm({ lead }) {
     const form = e.target
     const raw = Object.fromEntries(new FormData(form))
     const f = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, v === '' ? null : v]))
+
+      if (!f.mobile && !f.telephone_1 && !f.telephone_2) {
+        setBusy(false)
+        return setMsg('Renseignez au moins un numéro de téléphone.')
+      }
     const { data: { user } } = await supabase.auth.getUser()
 
     const data = {
