@@ -98,15 +98,11 @@ export default function LeadForm({ lead }) {
       setBusy(false)
       return setMsg(`Erreur : ${dupErr.message}`)
     }
+    
     if (dup?.length) {
-      const d = dup[0]
-      const nomExistant = `${d.prenom ?? ''} ${d.nom ?? ''}`.trim() || 'sans nom'
-      setBusy(false)
-      return setMsg(
-        `Doublon : ce numéro existe déjà pour le lead « ${nomExistant} »` +
-        (role === 'admin' && d.agent_nom ? ` (agent : ${d.agent_nom})` : '') + '.'
-      )
-    }
+  setBusy(false)
+  return setMsg('Ce numéro existe déjà dans notre base de données.')
+}
 
     const { data: { user } } = await supabase.auth.getUser()
 
