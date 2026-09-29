@@ -5,25 +5,28 @@ import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 function Logo() {
-  // Dépose ton fichier logo dans /public/logo.png (fond transparent conseillé, ~64x64px).
-  // Tant qu'il n'existe pas, ou si le chargement échoue, le badge "AC" s'affiche à la place.
+  // Le logo doit être dans /public/logo.png
+  // S'il ne charge pas, le badge "AC" s'affiche à la place.
   const [logoOk, setLogoOk] = useState(true)
   return (
-    <span className="flex items-center gap-2 text-white">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg" style={{ background: logoOk ? 'transparent' : 'var(--accent)' }}>
-        {logoOk ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src="/logo.png"
-            alt="Agapecazel"
-            className="h-full w-full object-contain"
-            onError={() => setLogoOk(false)}
-          />
-        ) : (
-          <span className="text-sm font-bold">AC</span>
-        )}
-      </span>
-      <span className="text-[15px] font-semibold leading-none">Agapecazel</span>
+    <span className="flex items-center gap-3 text-white">
+      {logoOk ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/logo.png"
+          alt="Logo Agapecazel"
+          className="h-10 w-10 shrink-0 rounded-full object-cover"
+          onError={() => setLogoOk(false)}
+        />
+      ) : (
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+          style={{ background: 'var(--accent)', color: 'var(--ink)' }}
+        >
+          AC
+        </span>
+      )}
+      <span className="text-[16px] font-semibold leading-none tracking-wide">Agapecazel</span>
     </span>
   )
 }
@@ -83,7 +86,7 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
             {role === 'admin' && navLink('/admin', 'Espace admin')}
           </nav>
 
-          {/* Desktop : Déconnexion + nom en dessous */}
+          {/* Desktop : Déconnexion + nom (or) en dessous */}
           <div className="ml-auto hidden flex-col items-end sm:flex">
             <button
               onClick={logout}
@@ -92,7 +95,11 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
               Déconnexion
             </button>
             {nom && (
-              <p className="mt-0.5 max-w-[200px] truncate px-3 text-xs text-white/60" title={nom}>
+              <p
+                className="mt-0.5 max-w-[220px] truncate px-3 text-xs font-semibold"
+                style={{ color: 'var(--accent)' }}
+                title={nom}
+              >
                 {nom}
               </p>
             )}
@@ -118,7 +125,7 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
             )}
             <button onClick={logout} className="rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/70 hover:bg-white/10">Déconnexion</button>
             {nom && (
-              <p className="truncate px-3 text-xs text-white/50" title={nom}>{nom}</p>
+              <p className="truncate px-3 text-xs font-semibold" style={{ color: 'var(--accent)' }} title={nom}>{nom}</p>
             )}
           </div>
         )}
