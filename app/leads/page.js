@@ -42,6 +42,49 @@ function StatutSelect({ value, onChange, isAdmin }) {
   )
 }
 
+// Filtre multi-statuts : pastilles cliquables (sélection multiple)
+function StatutFilter({ statuts, selected, counts, onToggle, onReset }) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={onReset}
+        aria-pressed={selected.length === 0}
+        className="rounded-full border px-3 py-1 text-[12px] font-medium transition-colors"
+        style={
+          selected.length === 0
+            ? { background: 'var(--ink)', color: '#fff', borderColor: 'var(--ink)' }
+            : { background: 'transparent', color: 'var(--muted)', borderColor: 'var(--border)' }
+        }
+      >
+        Tous
+      </button>
+      {statuts.map((s) => {
+        const active = selected.includes(s)
+        const color = `var(${STATUT_VARS[s] ?? '--status-nouveau'})`
+        return (
+          <button
+            key={s}
+            type="button"
+            onClick={() => onToggle(s)}
+            aria-pressed={active}
+            className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors"
+            style={
+              active
+                ? { background: color, color: '#fff', borderColor: color }
+                : { background: 'transparent', color: 'var(--ink)', borderColor: 'var(--border)' }
+            }
+          >
+            {!active && <span className="h-2 w-2 rounded-full" style={{ background: color }} />}
+            {STATUT_LABELS[s]}
+            <span className="opacity-70">{counts[s] ?? 0}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function MetaItem({ label, value }) {
   return (
     <div className="min-w-0">
@@ -84,7 +127,7 @@ export default function Leads() {
   const [agentsMap, setAgentsMap] = useState({})
   const [derniersAppels, setDerniersAppels] = useState({})
   const [docCounts, setDocCounts] = useState({})
-  const [filtre, setFiltre] = useState('')
+  const [filtres, setFiltres] = useState([]) // multi-sélection ; vide = tous
   const [recherche, setRecherche] = useState('')
   const [err, setErr] = useState('')
   const [uploadingId, setUploadingId] = useState(null)
@@ -153,10 +196,16 @@ export default function Leads() {
     setDocCounts((d) => ({ ...d, [leadId]: (d[leadId] ?? 0) + 1 }))
   }
 
+  const toggleFiltre = (s) =>
+    setFiltres((f) => (f.includes(s) ? f.filter((x) => x !== s) : [...f, s]))
+
   const statutsFiltre = isAdmin ? STATUTS : STATUTS.filter((s) => s !== 'installe')
 
+  const counts = {}
+  for (const l of leads) counts[l.statut] = (counts[l.statut] ?? 0) + 1
+
   const rows = leads
-    .filter((l) => !filtre || l.statut === filtre)
+    .filter((l) => filtres.length === 0 || filtres.includes(l.statut))
     .filter((l) => {
       if (!recherche.trim()) return true
       const q = recherche.trim().toLowerCase()
@@ -169,8 +218,8 @@ export default function Leads() {
       subtitle={isAdmin ? 'Vue admin' : undefined}
       actions={<Link href="/leads/new" className="btn-accent">Nouveau lead</Link>}
     >
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
+      <div className="mb-3">
+        <div className="relative">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--muted)' }}>
             <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.4" /><path d="m14 14-3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
           </svg>
@@ -181,11 +230,15 @@ export default function Leads() {
             className="inp pl-9"
           />
         </div>
-        <select className="inp sm:w-56" value={filtre} onChange={(e) => setFiltre(e.target.value)}>
-          <option value="">Tous les statuts</option>
-          {statutsFiltre.map((s) => <option key={s} value={s}>{STATUT_LABELS[s]}</option>)}
-        </select>
       </div>
+
+      <StatutFilter
+        statuts={statutsFiltre}
+        selected={filtres}
+        counts={counts}
+        onToggle={toggleFiltre}
+        onReset={() => setFiltres([])}
+      />
 
       {err && (
         <p className="mb-4 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{err}</p>
