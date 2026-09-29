@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
+import StatusBadge from '@/components/StatusBadge'
 
 const STATUTS = ['nouveau', 'rdv_pris', 'devis', 'signe', 'installe', 'perdu']
 const STATUT_LABELS = { nouveau: 'Nouveau', rdv_pris: 'RDV pris', devis: 'Devis', signe: 'Signé', installe: 'Installé', perdu: 'Perdu' }
@@ -19,8 +20,14 @@ function Badge({ count }) {
   )
 }
 
-// Tous les profils peuvent changer le statut, mais seul l'admin peut choisir "Installé"
+// - Admin : tous les statuts, y compris "Installé"
+// - Autres profils : pas d'option "Installé", et si le lead est déjà installé,
+//   simple badge sans possibilité de modifier
 function StatutSelect({ value, onChange, isAdmin }) {
+  if (!isAdmin && value === 'installe') {
+    return <StatusBadge statut={value} />
+  }
+  const options = isAdmin ? STATUTS : STATUTS.filter((s) => s !== 'installe')
   return (
     <select
       className="w-full rounded-lg border-0 px-2.5 py-1.5 text-[12px] font-medium text-white"
@@ -28,14 +35,9 @@ function StatutSelect({ value, onChange, isAdmin }) {
       value={value}
       onChange={onChange}
     >
-      {STATUTS.map((s) => {
-        const verrouille = s === 'installe' && !isAdmin && value !== 'installe'
-        return (
-          <option key={s} value={s} disabled={verrouille} style={{ color: '#1e293b', background: '#ffffff' }}>
-            {STATUT_LABELS[s]}{verrouille ? ' (admin)' : ''}
-          </option>
-        )
-      })}
+      {options.map((s) => (
+        <option key={s} value={s} style={{ color: '#1e293b', background: '#ffffff' }}>{STATUT_LABELS[s]}</option>
+      ))}
     </select>
   )
 }
@@ -116,8 +118,11 @@ export default function Leads() {
 
   const maj = async (id, patch) => {
     setErr('')
-    if (patch.statut === 'installe' && !isAdmin) {
-      return setErr('Seul un admin peut mettre le statut Installé.')
+    if (!isAdmin && patch.statut) {
+      const actuel = leads.find((x) => x.id === id)
+      if (actuel?.statut === 'installe' || patch.statut === 'installe') {
+        return setErr('Seul un admin peut modifier le statut Installé.')
+      }
     }
     const { error } = await supabase.from('leads').update(patch).eq('id', id)
     if (error) return setErr(error.message)
@@ -148,6 +153,8 @@ export default function Leads() {
     setDocCounts((d) => ({ ...d, [leadId]: (d[leadId] ?? 0) + 1 }))
   }
 
+  const statutsFiltre = isAdmin ? STATUTS : STATUTS.filter((s) => s !== 'installe')
+
   const rows = leads
     .filter((l) => !filtre || l.statut === filtre)
     .filter((l) => {
@@ -176,7 +183,7 @@ export default function Leads() {
         </div>
         <select className="inp sm:w-56" value={filtre} onChange={(e) => setFiltre(e.target.value)}>
           <option value="">Tous les statuts</option>
-          {STATUTS.map((s) => <option key={s} value={s}>{STATUT_LABELS[s]}</option>)}
+          {statutsFiltre.map((s) => <option key={s} value={s}>{STATUT_LABELS[s]}</option>)}
         </select>
       </div>
 
