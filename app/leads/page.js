@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
-import StatusBadge from '@/components/StatusBadge'
 
 const STATUTS = ['nouveau', 'rdv_pris', 'devis', 'signe', 'installe', 'perdu']
 const STATUT_LABELS = { nouveau: 'Nouveau', rdv_pris: 'RDV pris', devis: 'Devis', signe: 'Signé', installe: 'Installé', perdu: 'Perdu' }
@@ -20,7 +19,8 @@ function Badge({ count }) {
   )
 }
 
-function StatutSelect({ value, onChange }) {
+// Tous les profils peuvent changer le statut, mais seul l'admin peut choisir "Installé"
+function StatutSelect({ value, onChange, isAdmin }) {
   return (
     <select
       className="w-full rounded-lg border-0 px-2.5 py-1.5 text-[12px] font-medium text-white"
@@ -28,9 +28,14 @@ function StatutSelect({ value, onChange }) {
       value={value}
       onChange={onChange}
     >
-      {STATUTS.map((s) => (
-        <option key={s} value={s} style={{ color: '#1e293b', background: '#ffffff' }}>{STATUT_LABELS[s]}</option>
-      ))}
+      {STATUTS.map((s) => {
+        const verrouille = s === 'installe' && !isAdmin && value !== 'installe'
+        return (
+          <option key={s} value={s} disabled={verrouille} style={{ color: '#1e293b', background: '#ffffff' }}>
+            {STATUT_LABELS[s]}{verrouille ? ' (admin)' : ''}
+          </option>
+        )
+      })}
     </select>
   )
 }
@@ -82,6 +87,8 @@ export default function Leads() {
   const [err, setErr] = useState('')
   const [uploadingId, setUploadingId] = useState(null)
 
+  const isAdmin = role === 'admin'
+
   const load = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
@@ -109,6 +116,9 @@ export default function Leads() {
 
   const maj = async (id, patch) => {
     setErr('')
+    if (patch.statut === 'installe' && !isAdmin) {
+      return setErr('Seul un admin peut mettre le statut Installé.')
+    }
     const { error } = await supabase.from('leads').update(patch).eq('id', id)
     if (error) return setErr(error.message)
     setLeads((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x)))
@@ -143,13 +153,13 @@ export default function Leads() {
     .filter((l) => {
       if (!recherche.trim()) return true
       const q = recherche.trim().toLowerCase()
-      return `${l.prenom ?? ''} ${l.nom ?? ''} ${l.mobile ?? ''} ${l.ville ?? ''}`.toLowerCase().includes(q)
+      return `${l.prenom ?? ''} ${l.nom ?? ''} ${l.mobile ?? ''} ${l.telephone_1 ?? ''} ${l.ville ?? ''}`.toLowerCase().includes(q)
     })
 
   return (
     <AppShell
       title={`Leads (${rows.length})`}
-      subtitle={role === 'admin' ? 'Vue admin' : undefined}
+      subtitle={isAdmin ? 'Vue admin' : undefined}
       actions={<Link href="/leads/new" className="btn-accent">Nouveau lead</Link>}
     >
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -160,7 +170,7 @@ export default function Leads() {
           <input
             value={recherche}
             onChange={(e) => setRecherche(e.target.value)}
-            placeholder="Rechercher un nom, un mobile, une ville…"
+            placeholder="Rechercher un nom, un numéro, une ville…"
             className="inp pl-9"
           />
         </div>
@@ -185,19 +195,15 @@ export default function Leads() {
             <div className="mb-3 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-semibold" style={{ color: 'var(--ink)' }}>{l.civilite} {l.prenom} {l.nom}</p>
-                <p className="font-mono-data mt-0.5 text-[13px]" style={{ color: 'var(--muted)' }}>{l.mobile || '—'}</p>
+                <p className="font-mono-data mt-0.5 text-[13px]" style={{ color: 'var(--muted)' }}>{l.mobile || l.telephone_1 || '—'}</p>
               </div>
               <div className="w-32 shrink-0">
-                {role === 'admin' ? (
-                  <StatutSelect value={l.statut} onChange={(e) => maj(l.id, { statut: e.target.value })} />
-                ) : (
-                  <StatusBadge statut={l.statut} />
-                )}
+                <StatutSelect value={l.statut} isAdmin={isAdmin} onChange={(e) => maj(l.id, { statut: e.target.value })} />
               </div>
             </div>
             <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg p-2.5" style={{ background: 'var(--surface)' }}>
               <MetaItem label="Dernier appel" value={derniersAppels[l.id] ?? '—'} />
-              {role === 'admin' && <MetaItem label="Agent" value={agentsMap[l.agent_id] ?? '—'} />}
+              {isAdmin && <MetaItem label="Agent" value={agentsMap[l.agent_id] ?? '—'} />}
               <MetaItem label="Installateur" value={l.installateur || '—'} />
               <MetaItem label="Installation" value={fmtDate(l.date_installation)} />
             </dl>
@@ -216,7 +222,7 @@ export default function Leads() {
         <table className="w-full text-left text-sm">
           <thead>
             <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
-              {['Contact', 'Mobile', 'Dernier appel', 'Statut', 'Actions', ...(role === 'admin' ? ['Agent'] : []), 'Installateur', "Date d'installation"].map((h) => (
+              {['Contact', 'Téléphone', 'Dernier appel', 'Statut', 'Actions', ...(isAdmin ? ['Agent'] : []), 'Installateur', "Date d'installation"].map((h) => (
                 <th key={h} className="p-3 text-[13px] font-medium" style={{ color: 'var(--muted)' }}>{h}</th>
               ))}
             </tr>
@@ -231,27 +237,23 @@ export default function Leads() {
                 <td className="p-3 font-medium" style={{ borderLeft: `3px solid var(${STATUT_VARS[l.statut] ?? '--status-nouveau'})` }}>
                   {l.civilite} {l.prenom} {l.nom}
                 </td>
-                <td className="font-mono-data p-3 text-[13px]">{l.mobile}</td>
+                <td className="font-mono-data p-3 text-[13px]">{l.mobile || l.telephone_1 || '—'}</td>
                 <td className="p-3" style={{ color: 'var(--muted)' }}>{derniersAppels[l.id] ?? '—'}</td>
                 <td className="p-3">
                   <div className="w-36">
-                    {role === 'admin' ? (
-                      <StatutSelect value={l.statut} onChange={(e) => maj(l.id, { statut: e.target.value })} />
-                    ) : (
-                      <StatusBadge statut={l.statut} />
-                    )}
+                    <StatutSelect value={l.statut} isAdmin={isAdmin} onChange={(e) => maj(l.id, { statut: e.target.value })} />
                   </div>
                 </td>
                 <td className="p-3">
                   <RowActions l={l} role={role} uploadingId={uploadingId} docCounts={docCounts} onUpload={uploadRapide} onDelete={suppr} />
                 </td>
-                {role === 'admin' && <td className="p-3" style={{ color: 'var(--muted)' }}>{agentsMap[l.agent_id] ?? '—'}</td>}
+                {isAdmin && <td className="p-3" style={{ color: 'var(--muted)' }}>{agentsMap[l.agent_id] ?? '—'}</td>}
                 <td className="p-3" style={{ color: 'var(--muted)' }}>{l.installateur || '—'}</td>
                 <td className="p-3" style={{ color: 'var(--muted)' }}>{fmtDate(l.date_installation)}</td>
               </tr>
             ))}
             {!rows.length && (
-              <tr><td colSpan={role === 'admin' ? 8 : 7} className="p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun lead pour le moment.</td></tr>
+              <tr><td colSpan={isAdmin ? 8 : 7} className="p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun lead pour le moment.</td></tr>
             )}
           </tbody>
         </table>
