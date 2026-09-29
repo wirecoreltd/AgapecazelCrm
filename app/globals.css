@@ -1,26 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #1e3a33;
-  --ink-hover: #16302a;
-  --ink-soft: #33544c;
-  --surface: #f4f5f1;
+  /* Marine (couleur principale) */
+  --ink: #0f2a5e;
+  --ink-hover: #0a1f47;
+  --ink-soft: #2a4478;
+
+  /* Fonds */
+  --surface: #f6f4ee;   /* crème du site */
   --card: #ffffff;
-  --border: #e1e2da;
-  --border-strong: #c7c9be;
-  --muted: #6b6f68;
-  --accent: #c1852b;
-  --accent-hover: #a66f20;
-  --accent-soft: #f6ecd9;
+  --border: #e6e2d6;
+  --border-strong: #cdc8b6;
+  --muted: #6b7080;
+
+  /* Or (accent) */
+  --accent: #c9a24d;
+  --accent-hover: #b48b38;
+  --accent-soft: #f5ecd3;
+
   --danger: #b4483c;
   --danger-soft: #fbeae8;
   --success: #2f8f6b;
 
   --status-nouveau: #64748b;
-  --status-rdv_pris: #c1852b;
+  --status-rdv_pris: #c9a24d;
   --status-devis: #7c6fb0;
   --status-signe: #2f8f6b;
-  --status-installe: #1e3a33;
+  --status-installe: #0f2a5e;
   --status-perdu: #b4483c;
 }
 
@@ -43,9 +49,9 @@ body {
   .inp:focus {
     @apply outline-none;
     border-color: var(--ink);
-    box-shadow: 0 0 0 3px rgba(30, 58, 51, 0.12);
+    box-shadow: 0 0 0 3px rgba(15, 42, 94, 0.14);
   }
-  .inp::placeholder { color: #9a9d94; }
+  .inp::placeholder { color: #9a9da8; }
 
   /* Buttons */
   .btn {
@@ -55,9 +61,11 @@ body {
   }
   .btn:hover:not(:disabled) { background: var(--ink-hover); }
 
+  /* Bouton or : texte marine pour rester lisible sur l'or */
   .btn-accent {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
     background: var(--accent);
+    color: var(--ink);
   }
   .btn-accent:hover:not(:disabled) { background: var(--accent-hover); }
 
