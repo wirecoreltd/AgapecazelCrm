@@ -163,6 +163,7 @@ export default function LeadForm({ lead }) {
         <Field name="mobile" label="Mobile" value={lead?.mobile} />
         <Field name="telephone_1" label="Téléphone 1" value={lead?.telephone_1} />
         <Field name="telephone_2" label="Téléphone 2" value={lead?.telephone_2} />
+        <Field name="email" label="Email" type="email" value={lead?.email} />
         <p className="text-xs sm:col-span-2" style={{ color: 'var(--muted)' }}>
           * Renseignez au moins un numéro : mobile ou téléphone 1.
         </p>
