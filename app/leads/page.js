@@ -5,9 +5,9 @@ import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
 import StatusBadge from '@/components/StatusBadge'
 
-const STATUTS = ['nouveau', 'rdv_pris', 'devis', 'signe', 'installe', 'annule', 'perdu']
-const STATUT_LABELS = { nouveau: 'Nouveau', rdv_pris: 'RDV pris', devis: 'Devis', signe: 'Signé', installe: 'Installé', annule: 'Annulé',perdu: 'Perdu' }
-const STATUT_VARS = { nouveau: '--status-nouveau', rdv_pris: '--status-rdv_pris', devis: '--status-devis', signe: '--status-signe', installe: '--status-installe',annule: '--status-annule', perdu: '--status-perdu' }
+const STATUTS = ['nouveau', 'rdv_pris', 'devis', 'installation_programe', 'installe', 'annule', 'perdu']
+const STATUT_LABELS = { nouveau: 'Nouveau', rdv_pris: 'RDV pris', devis: 'Devis', installation_programmee: 'Installation Programmée', installe: 'Installé', annule: 'Annulé',perdu: 'Perdu' }
+const STATUT_VARS = { nouveau: '--status-nouveau', rdv_pris: '--status-rdv_pris', devis: '--status-devis', installation_programmee: '--status-installation_programmee', installe: '--status-installe',annule: '--status-annule', perdu: '--status-perdu' }
 const isAllowed = (file) => file.type === 'application/pdf' || file.type.startsWith('image/')
 const fmtDate = (v) => (v ? new Date(v).toLocaleDateString('fr-FR') : '—')
 
