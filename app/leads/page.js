@@ -5,9 +5,9 @@ import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
 import StatusBadge from '@/components/StatusBadge'
 
-const STATUTS = ['nouveau', 'installation_programmee', 'installe', 'annule', 'perdu', 'retraiter']
-const STATUT_LABELS = { nouveau: 'Nouveau', installation_programmee: 'Installation Programmée', installe: 'Installé', retraiter: 'A Retraité',annule: 'Annulé',perdu: 'Perdu' }
-const STATUT_VARS = { nouveau: '--status-nouveau', rdv_pris: '--status-rdv_pris', devis: '--status-devis', retraiter: '--status-retraiter', installation_programmee: '--status-installation_programmee', installe: '--status-installe',annule: '--status-annule', perdu: '--status-perdu' }
+const STATUTS = ['nouveau', 'installation_programmee', 'installe', 'annule', 'perdu', 'retraiter', 'pas_interesse']
+const STATUT_LABELS = { nouveau: 'Nouveau', installation_programmee: 'Installation Programmée', installe: 'Installé', pas_interesse: 'Client Pas Intéressé', retraiter: 'A Retraité',annule: 'Annulé',perdu: 'Perdu' }
+const STATUT_VARS = { nouveau: '--status-nouveau', rdv_pris: '--status-rdv_pris', devis: '--status-devis', retraiter: '--status-retraiter', pas_interesse: '--status-pas_interesse',installation_programmee: '--status-installation_programmee', installe: '--status-installe',annule: '--status-annule', perdu: '--status-perdu' }
 const isAllowed = (file) => file.type === 'application/pdf' || file.type.startsWith('image/')
 const fmtDate = (v) => (v ? new Date(v).toLocaleDateString('fr-FR') : '—')
 
