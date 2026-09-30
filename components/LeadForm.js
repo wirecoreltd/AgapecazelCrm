@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 const OUI_NON = [['oui', 'Oui'], ['non', 'Non']]
-const CHAUFFAGES = ['gaz naturel', 'électrique', 'fioul', 'gaz condensation', 'bois', 'pas de chauffage']
+const CHAUFFAGES = ['gaz naturel', 'électrique', 'fioul', 'gaz condensation', 'bois', 'pas de chauffage', 'autre']
   .map((c) => [c, c[0].toUpperCase() + c.slice(1)])
 const yn = (v) => (v == null ? '' : v ? 'oui' : 'non')
 
