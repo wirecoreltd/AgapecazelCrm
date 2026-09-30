@@ -13,7 +13,7 @@ const GROUPS = [
     titre: 'Contact',
     champs: [
       ['civilite', 'Civilité'], ['adresse', 'Adresse'], ['code_postal', 'Code postal'], ['ville', 'Ville'],
-      ['mobile', 'Mobile'], ['telephone_1', 'Téléphone 1'], ['telephone_2', 'Téléphone 2'],
+      ['mobile', 'Mobile'], ['telephone_1', 'Téléphone 1'], ['telephone_2', 'Téléphone 2'], ['email', 'Email'],
     ],
   },
   {
