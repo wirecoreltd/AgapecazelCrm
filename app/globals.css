@@ -26,8 +26,9 @@
   --status-rdv_pris: #c9a24d;
   --status-devis: #7c6fb0;
   --status-signe: #2f8f6b;
-  --status-installe: #0f2a5e;
+  --status-installe: #0a7d40;
   --status-perdu: #b4483c;
+  --status-annule: #d63220;
 }
 
 body {
