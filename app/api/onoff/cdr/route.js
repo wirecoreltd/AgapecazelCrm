@@ -50,36 +50,47 @@ export async function POST(req) {
 
   const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
-  // 1. Retrouver le lead par numéro
-  const { data: leads, error: leadErr } = await admin.rpc('find_lead_by_phone', { p_number: p.externalNumber || '' })
-  if (leadErr) return Response.json({ error: leadErr.message }, { status: 500 }) // 5xx => OnOff réessaie
-  const lead = leads?.[0]
-  // Numéro inconnu (ou test de validation OnOff) : on répond 200 pour éviter les renvois inutiles
-  if (!lead) return Response.json({ ok: true, matched: false })
-
-  // 2. Retrouver l'agent par email (même email dans OnOff et dans le CRM), sinon l'agent du lead
+  // 1. Retrouver l'agent par email (même email dans OnOff et dans le CRM)
   let userId = null
   if (p.onoffUserEmail) {
     const { data: prof } = await admin.from('profiles').select('id').ilike('email', p.onoffUserEmail).maybeSingle()
     userId = prof?.id ?? null
   }
-  userId = userId ?? lead.agent_id ?? null
-  if (!userId) return Response.json({ ok: true, matched: true, saved: false, reason: 'agent introuvable' })
 
-  // 3. Enregistrer (upsert = idempotent)
-  const { error } = await admin.from('lead_appels').upsert({
+  // 2. Retrouver le lead par numéro
+  const { data: leads, error: leadErr } = await admin.rpc('find_lead_by_phone', { p_number: p.externalNumber || '' })
+  if (leadErr) return Response.json({ error: leadErr.message }, { status: 500 }) // 5xx => OnOff réessaie
+  const lead = leads?.[0]
+
+  const commun = {
     onoff_id: String(p.id),
-    lead_id: lead.id,
-    user_id: userId,
     resultat: resultatDe(p),
     note: noteDe(p),
     direction: p.callDirection ?? null,
     duree_secondes: p.callDuration ?? null,
     numero_externe: p.externalNumber ?? null,
     enregistrement_url: p.callRecordingUrl || p.voicemailUrl || null,
-    source: 'onoff',
     created_at: p.callStarted || new Date().toISOString(),
-  }, { onConflict: 'onoff_id' })
+  }
+
+  // 3a. Numéro inconnu du CRM : on garde l'appel à part (rattaché automatiquement si un lead est créé ensuite)
+  if (!lead) {
+    const { error } = await admin.from('appels_non_rattaches').upsert(
+      { ...commun, user_id: userId, statut_onoff: p.callStatus ?? null },
+      { onConflict: 'onoff_id' }
+    )
+    if (error) return Response.json({ error: error.message }, { status: 500 })
+    return Response.json({ ok: true, matched: false, saved: true })
+  }
+
+  // 3b. Lead connu : historique de sa fiche (agent du lead si l'email OnOff est inconnu)
+  userId = userId ?? lead.agent_id ?? null
+  if (!userId) return Response.json({ ok: true, matched: true, saved: false, reason: 'agent introuvable' })
+
+  const { error } = await admin.from('lead_appels').upsert(
+    { ...commun, lead_id: lead.id, user_id: userId, source: 'onoff' },
+    { onConflict: 'onoff_id' }
+  )
   if (error) return Response.json({ error: error.message }, { status: 500 })
 
   return Response.json({ ok: true, matched: true, saved: true })
