@@ -36,7 +36,7 @@ export default function Appels() {
   const nomLead = (id) => { const l = leads[id]; return l ? `${l.prenom ?? ''} ${l.nom ?? ''}`.trim() || 'Lead' : 'Lead' }
   const liste = onglet === 'leads'
     ? rows.filter((r) => !q || `${nomLead(r.lead_id)} ${agents[r.user_id] ?? ''} ${r.resultat} ${r.numero_externe ?? ''}`.toLowerCase().includes(q))
-    : inconnus.filter((r) => !q || `${agents[r.user_id] ?? ''} ${r.numero_externe ?? ''} ${r.resultat}`.toLowerCase().includes(q))
+    : inconnus.filter((r) => !q || `${r.nom_contact ?? ''} ${agents[r.user_id] ?? ''} ${r.numero_externe ?? ''} ${r.resultat}`.toLowerCase().includes(q))
 
   return (
     <AppShell title={`Appels (${liste.length})`} subtitle="Appels passés et reçus avec OnOff">
@@ -56,14 +56,14 @@ export default function Appels() {
               <span className="font-medium">
                 {onglet === 'leads'
                   ? <Link href={`/leads/${r.lead_id}`} className="underline">{nomLead(r.lead_id)}</Link>
-                  : <span className="font-mono-data">{r.numero_externe ?? 'Numéro inconnu'}</span>}
+                  : <span>{r.nom_contact ?? <span className="font-mono-data">{r.numero_externe ?? 'Numéro inconnu'}</span>}</span>}
                 {' · '}{r.resultat}
               </span>
               <span className="font-mono-data text-[12px]" style={{ color: 'var(--muted)' }}>{fmtDate(r.created_at)}</span>
             </div>
             <div className="mt-1 text-[12px]" style={{ color: 'var(--muted)' }}>
               {agents[r.user_id] ?? 'Agent inconnu'} · {r.direction === 'INBOUND' ? 'Entrant' : r.direction === 'OUTBOUND' ? 'Sortant' : '—'} · {fmtDuree(r.duree_secondes)}
-              {r.numero_externe && onglet === 'leads' ? ` · ${r.numero_externe}` : ''}
+              {r.numero_externe && (onglet === 'leads' || r.nom_contact) ? ` · ${r.numero_externe}` : ''}
             </div>
             {r.note && <p className="mt-1 whitespace-pre-wrap text-[13px]" style={{ color: 'var(--muted)' }}>{r.note}</p>}
             {r.enregistrement_url && <a href={r.enregistrement_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[12px] underline">▶ Écouter l'enregistrement</a>}
