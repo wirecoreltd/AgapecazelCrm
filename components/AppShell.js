@@ -84,6 +84,7 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
           <nav className="ml-2 hidden items-center gap-1 sm:flex">
             {navLink('/leads', 'Leads')}
             {navLink('/appels', 'Appels')}
+            {navLink('/stats', 'Statistiques')}
             {role === 'admin' && navLink('/admin', 'Espace admin')}
             {role === 'admin' && navLink('/logs', 'Historique')}
           </nav>
@@ -123,6 +124,7 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
           <div className="flex flex-col gap-1 border-t border-white/10 px-4 py-3 sm:hidden">
             <Link href="/leads" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Leads</Link>
             <Link href="/appels" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Appels</Link>
+            <Link href="/stats" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Statistiques</Link>
             {role === 'admin' && (
               <Link href="/admin" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Espace admin</Link>
             )}
