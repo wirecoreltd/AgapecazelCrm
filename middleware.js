@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
 export async function middleware(req) {
+  // Webhook OnOff : pas de session utilisateur, protégé par X-API-KEY dans la route
+  if (req.nextUrl.pathname.startsWith('/api/onoff')) return NextResponse.next()
   let res = NextResponse.next({ request: req })
   const sb = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
