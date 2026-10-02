@@ -37,7 +37,6 @@ export default function Appels() {
   const [rows, setRows] = useState([])
   const [agents, setAgents] = useState({})
   const [leads, setLeads] = useState({})
-  const [onglet, setOnglet] = useState('leads') // 'leads' | 'inconnus'
   const [inconnus, setInconnus] = useState([])
   const [recherche, setRecherche] = useState('')
   const [filtreType, setFiltreType] = useState('tous')
@@ -61,21 +60,20 @@ export default function Appels() {
 
   const q = recherche.trim().toLowerCase()
   const nomLead = (id) => { const l = leads[id]; return l ? `${l.prenom ?? ''} ${l.nom ?? ''}`.trim() || 'Lead' : 'Lead' }
-  const liste = onglet === 'leads'
-    ? rows.filter((r) => !q || `${nomLead(r.lead_id)} ${agents[r.user_id] ?? ''} ${r.resultat} ${r.numero_externe ?? ''}`.toLowerCase().includes(q))
-    : inconnus.filter((r) => !q || `${r.nom_contact ?? ''} ${agents[r.user_id] ?? ''} ${r.numero_externe ?? ''} ${r.resultat}`.toLowerCase().includes(q))
+  // Les deux sources fusionnées, du plus récent au plus ancien
+  const tous = [
+    ...rows.map((r) => ({ ...r, cle: `l${r.id}`, horsCrm: false, nom: nomLead(r.lead_id) })),
+    ...inconnus.map((r) => ({ ...r, cle: `u${r.id}`, horsCrm: true, nom: r.nom_contact ?? null })),
+  ].sort((x, y) => new Date(y.created_at) - new Date(x.created_at))
+  const liste = tous.filter((r) => !q || `${r.nom ?? ''} ${agents[r.user_id] ?? ''} ${r.numero_externe ?? ''} ${r.resultat}`.toLowerCase().includes(q))
 
   const listeFiltree = filtreType === 'tous' ? liste : liste.filter((r) => typeAppel(r) === filtreType)
 
   return (
     <AppShell title={`Appels (${listeFiltree.length})`} subtitle="Appels passés et reçus avec OnOff">
       {err && <p className="mb-3 text-sm" style={{ color: 'var(--danger)' }}>{err}</p>}
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="flex gap-2">
-          <button className={onglet === 'leads' ? 'btn-accent' : 'btn'} onClick={() => setOnglet('leads')}>Leads ({rows.length})</button>
-          <button className={onglet === 'inconnus' ? 'btn-accent' : 'btn'} onClick={() => setOnglet('inconnus')}>Numéros hors CRM ({inconnus.length})</button>
-        </div>
-        <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher (lead, agent, numéro, résultat)…" className="inp flex-1" />
+      <div className="mb-4">
+        <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher (nom, agent, numéro, résultat)…" className="inp w-full" />
       </div>
 
       <div className="mb-3 flex flex-wrap gap-2">
@@ -86,20 +84,21 @@ export default function Appels() {
 
       <div className="space-y-2">
         {listeFiltree.map((r) => (
-          <div key={r.id} className="card p-3 text-sm">
+          <div key={r.cle} className="card p-3 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
               <span className="flex items-center gap-2 font-medium">
                 <IconeAppel type={typeAppel(r)} />
-                {onglet === 'leads'
-                  ? <Link href={`/leads/${r.lead_id}`} className="underline">{nomLead(r.lead_id)}</Link>
-                  : <span>{r.nom_contact ?? <span className="font-mono-data">{r.numero_externe ?? 'Numéro inconnu'}</span>}</span>}
+                {r.horsCrm
+                  ? <span>{r.nom ?? <span className="font-mono-data">{r.numero_externe ?? 'Numéro inconnu'}</span>}</span>
+                  : <Link href={`/leads/${r.lead_id}`} className="underline">{r.nom}</Link>}
                 {' · '}{r.resultat}
+                {r.horsCrm && <span className="rounded px-1.5 py-0.5 text-[11px] font-normal" style={{ background: 'var(--accent-soft)', color: 'var(--accent-hover)' }}>Hors CRM</span>}
               </span>
               <span className="font-mono-data text-[12px]" style={{ color: 'var(--muted)' }}>{fmtDate(r.created_at)}</span>
             </div>
             <div className="mt-1 text-[12px]" style={{ color: 'var(--muted)' }}>
               {agents[r.user_id] ?? 'Agent inconnu'} · {TYPES[typeAppel(r)]?.label ?? '—'} · {fmtDuree(r.duree_secondes)}
-              {r.numero_externe && (onglet === 'leads' || r.nom_contact) ? ` · ${r.numero_externe}` : ''}
+              {r.numero_externe && (!r.horsCrm || r.nom) ? ` · ${r.numero_externe}` : ''}
             </div>
             {r.note && <p className="mt-1 whitespace-pre-wrap text-[13px]" style={{ color: 'var(--muted)' }}>{r.note}</p>}
             {r.enregistrement_url && <a href={r.enregistrement_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[12px] underline">▶ Écouter l'enregistrement</a>}
