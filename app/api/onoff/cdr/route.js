@@ -75,8 +75,14 @@ export async function POST(req) {
 
   // 3a. Numéro inconnu du CRM : on garde l'appel à part (rattaché automatiquement si un lead est créé ensuite)
   if (!lead) {
+    // Nom retrouvé dans la liste de référence (table annuaire), si elle existe et contient ce numéro
+    let nomContact = null
+    const { data: ann } = await admin.rpc('find_annuaire_by_phone', { p_number: p.externalNumber || '' })
+    const c = ann?.[0]
+    if (c) nomContact = `${c.prenom ?? ''} ${c.nom ?? ''}`.trim() || null
+
     const { error } = await admin.from('appels_non_rattaches').upsert(
-      { ...commun, user_id: userId, statut_onoff: p.callStatus ?? null },
+      { ...commun, user_id: userId, statut_onoff: p.callStatus ?? null, nom_contact: nomContact },
       { onConflict: 'onoff_id' }
     )
     if (error) return Response.json({ error: error.message }, { status: 500 })
