@@ -44,6 +44,7 @@ export default function CallLog({ leadId }) {
               <span className="font-mono-data text-[12px]" style={{ color: 'var(--muted)' }}>{new Date(a.created_at).toLocaleString('fr-FR')}</span>
             </div>
             {a.note && <p className="mt-1 whitespace-pre-wrap text-[13px]" style={{ color: 'var(--muted)' }}>{a.note}</p>}
+            {a.enregistrement_url && <a href={a.enregistrement_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[12px] underline">▶ Écouter l'enregistrement</a>}
           </li>
         ))}
         {!appels.length && <li className="text-sm" style={{ color: 'var(--muted)' }}>Aucun appel enregistré.</li>}
