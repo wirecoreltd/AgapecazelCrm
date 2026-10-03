@@ -49,6 +49,21 @@ export default function LeadForm({ lead }) {
   const [installateurs, setInstallateurs] = useState([])
   const [installateurChoisi, setInstallateurChoisi] = useState(lead?.installateur ?? '')
   const [nouvelInstallateur, setNouvelInstallateur] = useState('')
+  const [prefill, setPrefill] = useState(null)
+  const src = lead ?? prefill // valeurs affichées : lead existant, sinon pré-remplissage depuis un appel
+
+  // Création depuis la page Appels : infos de l'annuaire + historique des appels
+  useEffect(() => {
+    if (lead) return
+    try {
+      const brut = sessionStorage.getItem('prefill_lead')
+      if (!brut) return
+      const p = JSON.parse(brut)
+      const f = p.fiche ?? {}
+      f.proprietaire = f.proprietaire === 'oui' ? true : f.proprietaire === 'non' ? false : null
+      setPrefill({ ...f, appels: p.appels ?? [] })
+    } catch {}
+  }, [lead])
 
   useEffect(() => {
     supabase.from('installateurs').select('nom').order('nom').then(({ data }) => setInstallateurs(data ?? []))
@@ -133,16 +148,32 @@ export default function LeadForm({ lead }) {
     const { error } = await supabase.from('leads').insert({ id: newId, ...data, statut: 'nouveau', created_by: user.id })
     setBusy(false)
     if (error) return setMsg(`Erreur : ${error.message}`)
+    sessionStorage.removeItem('prefill_lead')
     // On enchaîne directement sur la fiche du lead pour permettre l'ajout de documents / appels
     router.push(`/leads/${newId}/edit?cree=1`)
   }
 
   return (
-    <form onSubmit={submit} className="space-y-8">
+    <form key={prefill ? 'prefill' : 'vide'} onSubmit={submit} className="space-y-8">
+      {!lead && prefill?.appels?.length > 0 && (
+        <div className="card p-3 text-sm" style={{ background: 'var(--accent-soft)' }}>
+          <p className="font-medium">Historique des appels ({prefill.appels.length})</p>
+          <p className="mb-2 text-[12px]" style={{ color: 'var(--muted)' }}>Il sera rattaché automatiquement à la fiche à l'enregistrement.</p>
+          <ul className="space-y-1 text-[13px]">
+            {prefill.appels.map((a, i) => (
+              <li key={i}>
+                {new Date(a.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                {' · '}{a.direction === 'INBOUND' ? 'Reçu' : 'Émis'}{' · '}{a.resultat}
+                {a.duree_secondes ? ` · ${Math.floor(a.duree_secondes / 60)} min ${String(a.duree_secondes % 60).padStart(2, '0')} s` : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <Section title="Identité">
-        <Select name="civilite" label="Civilité" required value={lead?.civilite} options={[['M', 'M'], ['Mme', 'Mme']]} />
-        <Field name="prenom" label="Prénom" value={lead?.prenom} />
-        <Field name="nom" label="Nom" value={lead?.nom} />
+        <Select name="civilite" label="Civilité" required value={src?.civilite} options={[['M', 'M'], ['Mme', 'Mme']]} />
+        <Field name="prenom" label="Prénom" value={src?.prenom} />
+        <Field name="nom" label="Nom" value={src?.nom} />
       </Section>
 
       {role === 'admin' && (
@@ -150,38 +181,38 @@ export default function LeadForm({ lead }) {
           <Select
             name="agent_id"
             label="Agent associé"
-            value={lead?.agent_id}
+            value={src?.agent_id}
             options={agents.map((a) => [a.id, a.nom_complet])}
           />
         </Section>
       )}
 
       <Section title="Coordonnées">
-        <Field name="adresse" label="Adresse (rue et ville)" required value={lead?.adresse} />
-        <Field name="code_postal" label="Code postal" required value={lead?.code_postal} />
-        <Field name="ville" label="Ville" required value={lead?.ville} />
-        <Field name="mobile" label="Mobile" value={lead?.mobile} />
-        <Field name="telephone_1" label="Téléphone 1" value={lead?.telephone_1} />
-        <Field name="telephone_2" label="Téléphone 2" value={lead?.telephone_2} />
-        <Field name="email" label="Email" type="email" value={lead?.email} />
+        <Field name="adresse" label="Adresse (rue et ville)" required value={src?.adresse} />
+        <Field name="code_postal" label="Code postal" required value={src?.code_postal} />
+        <Field name="ville" label="Ville" required value={src?.ville} />
+        <Field name="mobile" label="Mobile" value={src?.mobile} />
+        <Field name="telephone_1" label="Téléphone 1" value={src?.telephone_1} />
+        <Field name="telephone_2" label="Téléphone 2" value={src?.telephone_2} />
+        <Field name="email" label="Email" type="email" value={src?.email} />
         <p className="text-xs sm:col-span-2" style={{ color: 'var(--muted)' }}>
           * Renseignez au moins un numéro : mobile ou téléphone 1.
         </p>
       </Section>
 
       <Section title="Logement">
-        <Select name="proprietaire" label="Propriétaire" required value={yn(lead?.proprietaire)} options={OUI_NON} />
-        <Field name="nb_personnes" label="Nb de personnes" required type="number" value={lead?.nb_personnes} />
-        <Field name="revenus" label="Revenus" value={lead?.revenus} />
-        <Select name="maison_plus_15_ans" label="Maison +15 ans" value={yn(lead?.maison_plus_15_ans)} options={OUI_NON} />
-        <Select name="type_habitat" label="Type d'habitat" required value={lead?.type_habitat} options={[['maison', 'Maison'], ['appartement', 'Appartement']]} />
-        <Field name="surface_habitable" label="Surface habitable (m²)" required type="number" value={lead?.surface_habitable} />
-        <Select name="chauffage" label="Type de chauffage" required value={lead?.chauffage} options={CHAUFFAGES} />
+        <Select name="proprietaire" label="Propriétaire" required value={yn(src?.proprietaire)} options={OUI_NON} />
+        <Field name="nb_personnes" label="Nb de personnes" required type="number" value={src?.nb_personnes} />
+        <Field name="revenus" label="Revenus" value={src?.revenus} />
+        <Select name="maison_plus_15_ans" label="Maison +15 ans" value={yn(src?.maison_plus_15_ans)} options={OUI_NON} />
+        <Select name="type_habitat" label="Type d'habitat" required value={src?.type_habitat} options={[['maison', 'Maison'], ['appartement', 'Appartement']]} />
+        <Field name="surface_habitable" label="Surface habitable (m²)" required type="number" value={src?.surface_habitable} />
+        <Select name="chauffage" label="Type de chauffage" required value={src?.chauffage} options={CHAUFFAGES} />
       </Section>
 
       <Section title="Projet">
-        <Field name="produit_1" label="Produit 1" value={lead?.produit_1} />
-        <Select name="documents_requis" label="Documents récupérer" value={yn(lead?.documents_requis)} options={OUI_NON} />
+        <Field name="produit_1" label="Produit 1" value={src?.produit_1} />
+        <Select name="documents_requis" label="Documents récupérer" value={yn(src?.documents_requis)} options={OUI_NON} />
 
         {role === 'admin' && (
   <div className="sm:col-span-2">
