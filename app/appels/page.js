@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
 
@@ -34,6 +35,8 @@ function IconeAppel({ type }) {
 }
 
 export default function Appels() {
+  const router = useRouter()
+  const [enCours, setEnCours] = useState(null)
   const [rows, setRows] = useState([])
   const [agents, setAgents] = useState({})
   const [leads, setLeads] = useState({})
@@ -57,6 +60,21 @@ export default function Appels() {
       setLeads(Object.fromEntries((l ?? []).map((x) => [x.id, x])))
     }
   })() }, [])
+
+  // Prépare la fiche : infos de l'annuaire + historique des appels, puis ouvre le formulaire de création
+  const inserer = async (r) => {
+    setEnCours(r.cle); setErr('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`/api/appels/prefill?numero=${encodeURIComponent(r.numero_externe || '')}`, {
+        headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erreur')
+      sessionStorage.setItem('prefill_lead', JSON.stringify(json))
+      router.push('/leads/new')
+    } catch (e) { setErr(e.message); setEnCours(null) }
+  }
 
   const q = recherche.trim().toLowerCase()
   const nomLead = (id) => { const l = leads[id]; return l ? `${l.prenom ?? ''} ${l.nom ?? ''}`.trim() || 'Lead' : 'Lead' }
@@ -88,11 +106,8 @@ export default function Appels() {
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
               <span className="flex items-center gap-2 font-medium">
                 <IconeAppel type={typeAppel(r)} />
-                {r.horsCrm
-                  ? <span>{r.nom ?? <span className="font-mono-data">{r.numero_externe ?? 'Numéro inconnu'}</span>}</span>
-                  : <Link href={`/leads/${r.lead_id}`} className="underline">{r.nom}</Link>}
+                <span>{r.nom ?? <span className="font-mono-data">{r.numero_externe ?? 'Numéro inconnu'}</span>}</span>
                 {' · '}{r.resultat}
-                {r.horsCrm && <span className="rounded px-1.5 py-0.5 text-[11px] font-normal" style={{ background: 'var(--accent-soft)', color: 'var(--accent-hover)' }}>Hors CRM</span>}
               </span>
               <span className="font-mono-data text-[12px]" style={{ color: 'var(--muted)' }}>{fmtDate(r.created_at)}</span>
             </div>
@@ -102,6 +117,15 @@ export default function Appels() {
             </div>
             {r.note && <p className="mt-1 whitespace-pre-wrap text-[13px]" style={{ color: 'var(--muted)' }}>{r.note}</p>}
             {r.enregistrement_url && <a href={r.enregistrement_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[12px] underline">▶ Écouter l'enregistrement</a>}
+            <div className="mt-2">
+              {r.horsCrm ? (
+                <button onClick={() => inserer(r)} disabled={enCours === r.cle || !r.numero_externe} className="btn-accent">
+                  {enCours === r.cle ? 'Préparation…' : 'Insérer dans le CRM'}
+                </button>
+              ) : (
+                <Link href={`/leads/${r.lead_id}`} className="btn inline-block">Accéder à la fiche</Link>
+              )}
+            </div>
           </div>
         ))}
         {!listeFiltree.length && <p className="text-sm" style={{ color: 'var(--muted)' }}>Aucun appel pour le moment.</p>}
