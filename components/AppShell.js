@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { canAccess } from '@/lib/roles'
 
 function Logo() {
   // Le logo doit être dans /public/logo.png
@@ -82,11 +83,11 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
             <Logo />
           </Link>
           <nav className="ml-2 hidden items-center gap-1 sm:flex">
-            {navLink('/leads', 'Leads')}
-            {navLink('/appels', 'Appels')}
-            {navLink('/stats', 'Statistiques')}
-            {role === 'admin' && navLink('/admin', 'Espace admin')}
-            {role === 'admin' && navLink('/logs', 'Historique')}
+            {canAccess(role, '/leads') && navLink('/leads', 'Leads')}
+            {canAccess(role, '/appels') && navLink('/appels', 'Appels')}
+            {canAccess(role, '/stats') && navLink('/stats', 'Statistiques')}
+            {canAccess(role, '/admin') && navLink('/admin', 'Espace admin')}
+            {canAccess(role, '/logs') && navLink('/logs', 'Historique')}
           </nav>
 
           {/* Desktop : Déconnexion + nom (or) en dessous */}
@@ -122,13 +123,13 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
         </div>
         {menuOpen && (
           <div className="flex flex-col gap-1 border-t border-white/10 px-4 py-3 sm:hidden">
-            <Link href="/leads" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Leads</Link>
-            <Link href="/appels" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Appels</Link>
-            <Link href="/stats" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Statistiques</Link>
-            {role === 'admin' && (
+            {canAccess(role, '/leads') && <Link href="/leads" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Leads</Link>}
+            {canAccess(role, '/appels') && <Link href="/appels" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Appels</Link>}
+            {canAccess(role, '/stats') && <Link href="/stats" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Statistiques</Link>}
+            {canAccess(role, '/admin') && (
               <Link href="/admin" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Espace admin</Link>
             )}
-            {role === 'admin' && (
+            {canAccess(role, '/logs') && (
               <Link href="/logs" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Historique</Link>
             )}
             <button onClick={logout} className="rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/70 hover:bg-white/10">Déconnexion</button>
