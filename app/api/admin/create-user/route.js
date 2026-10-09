@@ -22,7 +22,7 @@ export async function POST(req) {
     const { data: caller } = await admin.from('profiles').select('role').eq('id', user.id).single()
     if (caller?.role !== 'admin') return Response.json({ error: "Réservé à l'admin." }, { status: 403 })
 
-    if (!['admin', 'agent'].includes(role)) return Response.json({ error: 'Rôle invalide.' }, { status: 400 })
+    if (!['admin', 'agent', 'call_center'].includes(role)) return Response.json({ error: 'Rôle invalide.' }, { status: 400 })
 
     const { data: created, error } = await admin.auth.admin.createUser({
       email, password, email_confirm: true,
