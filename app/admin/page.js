@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
+import { roleLabel } from '@/lib/roles'
 
 const CARACTERES_MDP = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
 const genererMotDePasse = () => {
@@ -141,6 +142,7 @@ export default function Admin() {
               <span className="field-label">Rôle</span>
               <select name="role" required className="inp">
                 <option value="agent">Agent</option>
+                <option value="call_center">Call Center</option>
                 <option value="admin">Admin</option>
               </select>
             </label>
@@ -165,7 +167,7 @@ export default function Admin() {
                 <span className="font-medium">{u.nom_complet}</span>
                 <span className="text-[12px]" style={{ color: 'var(--muted)' }}>{u.email}</span>
                 <span className="flex items-center gap-2">
-                  <span className="rounded-full px-2 py-0.5 text-[11px] font-medium text-white" style={{ background: u.role === 'admin' ? 'var(--ink)' : 'var(--status-nouveau)' }}>{u.role}</span>
+                  <span className="rounded-full px-2 py-0.5 text-[11px] font-medium text-white" style={{ background: u.role === 'admin' ? 'var(--ink)' : 'var(--status-nouveau)' }}>{roleLabel(u.role)}</span>
                   <button
                     type="button"
                     onClick={() => setResetTarget(u)}
