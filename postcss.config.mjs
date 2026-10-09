@@ -1,1 +1,1 @@
-{"compilerOptions":{"paths":{"@/*":["./*"]}}}
+export default { plugins: { "@tailwindcss/postcss": {} } };
