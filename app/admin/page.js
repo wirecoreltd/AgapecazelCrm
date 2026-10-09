@@ -78,12 +78,66 @@ function ResetPasswordModal({ user, onClose }) {
   )
 }
 
+function EditUserModal({ user, onClose, onSaved }) {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const enregistrer = async (e) => {
+    e.preventDefault(); setBusy(true); setMsg('')
+    const f = Object.fromEntries(new FormData(e.target))
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/admin/update-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...f, userId: user.id, accessToken: session.access_token }),
+    })
+    const json = await res.json()
+    setBusy(false)
+    if (!res.ok) return setMsg(`Erreur : ${json.error}`)
+    onSaved()
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <form className="card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()} onSubmit={enregistrer}>
+        <h2 className="section-heading mb-4">Modifier l'utilisateur</h2>
+        <div className="space-y-3">
+          <label className="block">
+            <span className="field-label">Nom complet</span>
+            <input name="nom_complet" required defaultValue={user.nom_complet ?? ''} className="inp" />
+          </label>
+          <label className="block">
+            <span className="field-label">Email</span>
+            <input name="email" type="email" required defaultValue={user.email ?? ''} className="inp" />
+          </label>
+          <label className="block">
+            <span className="field-label">Rôle</span>
+            <select name="role" required defaultValue={user.role} className="inp">
+              <option value="agent">Agent</option>
+              <option value="call_center">Call Center</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+        </div>
+        {msg && (
+          <p className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{msg}</p>
+        )}
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn-ghost">Annuler</button>
+          <button disabled={busy} className="btn-accent">{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
 export default function Admin() {
   const [allowed, setAllowed] = useState(null)
   const [users, setUsers] = useState([])
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
   const [resetTarget, setResetTarget] = useState(null)
+  const [editTarget, setEditTarget] = useState(null)
 
   const load = async () => {
     const { data } = await supabase.from('profiles').select('*').order('nom_complet')
@@ -170,6 +224,14 @@ export default function Admin() {
                   <span className="rounded-full px-2 py-0.5 text-[11px] font-medium text-white" style={{ background: u.role === 'admin' ? 'var(--ink)' : 'var(--status-nouveau)' }}>{roleLabel(u.role)}</span>
                   <button
                     type="button"
+                    onClick={() => setEditTarget(u)}
+                    className="text-[12px] font-medium underline"
+                    style={{ color: 'var(--accent)' }}
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setResetTarget(u)}
                     className="text-[12px] font-medium underline"
                     style={{ color: 'var(--accent)' }}
@@ -184,6 +246,7 @@ export default function Admin() {
         </div>
       </div>
 
+      {editTarget && <EditUserModal user={editTarget} onClose={() => setEditTarget(null)} onSaved={() => { setEditTarget(null); load() }} />}
       {resetTarget && <ResetPasswordModal user={resetTarget} onClose={() => setResetTarget(null)} />}
     </AppShell>
   )
