@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import { canAccess } from '@/lib/roles'
 
 export async function middleware(req) {
   // Webhook OnOff : pas de session utilisateur, protégé par X-API-KEY dans la route
@@ -28,6 +29,14 @@ export async function middleware(req) {
   if (user && mustChange && !onChange && !isApi) return NextResponse.redirect(new URL('/change-password', req.url))
   if (user && !mustChange && onChange) return NextResponse.redirect(new URL('/leads', req.url))
   if (user && onLogin) return NextResponse.redirect(new URL(mustChange ? '/change-password' : '/leads', req.url))
+  // Contrôle d'accès par rôle (pages + API appels)
+  if (user && !onLogin && !onChange && (!isApi || path.startsWith('/api/appels'))) {
+    const { data: prof } = await sb.from('profiles').select('role').eq('id', user.id).single()
+    if (!canAccess(prof?.role, path)) {
+      if (isApi) return Response.json({ error: 'Accès refusé.' }, { status: 403 })
+      return NextResponse.redirect(new URL('/leads', req.url))
+    }
+  }
   return res
 }
 
