@@ -28,7 +28,10 @@ export async function POST(req) {
     const { data: caller } = await admin.from('profiles').select('role').eq('id', user.id).single()
     if (caller?.role !== 'admin') return Response.json({ error: "Réservé à l'admin." }, { status: 403 })
 
-    const { error } = await admin.auth.admin.updateUserById(userId, { password: newPassword })
+    const { error } = await admin.auth.admin.updateUserById(userId, {
+      password: newPassword,
+      app_metadata: { must_change_password: true },
+    })
     if (error) return Response.json({ error: error.message }, { status: 400 })
 
     return Response.json({ ok: true })
