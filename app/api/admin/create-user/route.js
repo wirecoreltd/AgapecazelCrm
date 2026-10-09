@@ -24,7 +24,10 @@ export async function POST(req) {
 
     if (!['admin', 'agent'].includes(role)) return Response.json({ error: 'Rôle invalide.' }, { status: 400 })
 
-    const { data: created, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true })
+    const { data: created, error } = await admin.auth.admin.createUser({
+      email, password, email_confirm: true,
+      app_metadata: { must_change_password: true },
+    })
     if (error) return Response.json({ error: error.message }, { status: 400 })
 
     const { error: profErr } = await admin.from('profiles').insert({
