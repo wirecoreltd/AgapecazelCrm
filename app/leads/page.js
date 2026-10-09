@@ -143,7 +143,7 @@ export default function Leads() {
     setLeads(data ?? [])
 
     if (p?.role === 'admin') {
-      const { data: agents } = await supabase.from('profiles').select('id, nom_complet').eq('role', 'agent')
+      const { data: agents } = await supabase.from('profiles').select('id, nom_complet').in('role', ['agent', 'call_center'])
       setAgentsMap(Object.fromEntries((agents ?? []).map((a) => [a.id, a.nom_complet])))
     }
 
