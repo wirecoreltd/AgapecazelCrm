@@ -73,7 +73,7 @@ export default function LeadForm({ lead }) {
       const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
       setRole(p?.role ?? null)
       if (p?.role === 'admin') {
-        const { data: ag } = await supabase.from('profiles').select('id, nom_complet').eq('role', 'agent').order('nom_complet')
+        const { data: ag } = await supabase.from('profiles').select('id, nom_complet').in('role', ['agent', 'call_center']).order('nom_complet')
         setAgents(ag ?? [])
       }
     })()
