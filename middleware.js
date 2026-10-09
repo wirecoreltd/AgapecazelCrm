@@ -18,9 +18,16 @@ export async function middleware(req) {
     } }
   )
   const { data: { user } } = await sb.auth.getUser()
-  const onLogin = req.nextUrl.pathname.startsWith('/login')
+  const path = req.nextUrl.pathname
+  const onLogin = path.startsWith('/login')
+  const onChange = path.startsWith('/change-password')
+  const isApi = path.startsWith('/api')
+  // Drapeau posé côté serveur (app_metadata : non modifiable par l'utilisateur)
+  const mustChange = user?.app_metadata?.must_change_password === true
   if (!user && !onLogin) return NextResponse.redirect(new URL('/login', req.url))
-  if (user && onLogin) return NextResponse.redirect(new URL('/leads', req.url))
+  if (user && mustChange && !onChange && !isApi) return NextResponse.redirect(new URL('/change-password', req.url))
+  if (user && !mustChange && onChange) return NextResponse.redirect(new URL('/leads', req.url))
+  if (user && onLogin) return NextResponse.redirect(new URL(mustChange ? '/change-password' : '/leads', req.url))
   return res
 }
 
