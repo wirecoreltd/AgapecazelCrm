@@ -43,6 +43,9 @@ export default function Appels() {
   const [inconnus, setInconnus] = useState([])
   const [recherche, setRecherche] = useState('')
   const [filtreType, setFiltreType] = useState('tous')
+  const [filtreJour, setFiltreJour] = useState('tous')     // tous | aujourdhui | hier
+  const [filtrePersonne, setFiltrePersonne] = useState('tous') // 'tous' ou id de l'agent
+  const [filtreDuree, setFiltreDuree] = useState('toutes') // toutes | moins1 | moins5 | plus5
   const [err, setErr] = useState('')
 
   useEffect(() => { (async () => {
@@ -85,7 +88,33 @@ export default function Appels() {
   ].sort((x, y) => new Date(y.created_at) - new Date(x.created_at))
   const liste = tous.filter((r) => !q || `${r.nom ?? ''} ${agents[r.user_id] ?? ''} ${r.numero_externe ?? ''} ${r.resultat}`.toLowerCase().includes(q))
 
-  const listeFiltree = filtreType === 'tous' ? liste : liste.filter((r) => typeAppel(r) === filtreType)
+  // Début de journée (heure locale) pour « aujourd'hui » et « hier »
+  const debutJour = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const auj = debutJour(new Date())
+  const hier = auj - 24 * 3600 * 1000
+  const jourOk = (r) => {
+    if (filtreJour === 'tous') return true
+    const t = new Date(r.created_at).getTime()
+    return filtreJour === 'aujourdhui' ? t >= auj : t >= hier && t < auj
+  }
+  const dureeOk = (r) => {
+    if (filtreDuree === 'toutes') return true
+    const d = r.duree_secondes ?? 0 // appel sans durée (manqué…) = 0 s
+    if (filtreDuree === 'moins1') return d < 60
+    if (filtreDuree === 'moins5') return d < 300
+    return d > 300 // plus5
+  }
+
+  // Personnes présentes dans les appels (pour le menu déroulant)
+  const personnes = [...new Set(tous.map((r) => r.user_id).filter(Boolean))]
+    .map((id) => ({ id, nom: agents[id] ?? 'Agent inconnu' }))
+    .sort((a, b) => a.nom.localeCompare(b.nom))
+
+  const listeFiltree = liste
+    .filter((r) => filtreType === 'tous' || typeAppel(r) === filtreType)
+    .filter(jourOk)
+    .filter((r) => filtrePersonne === 'tous' || r.user_id === filtrePersonne)
+    .filter(dureeOk)
 
   return (
     <AppShell title={`Appels (${listeFiltree.length})`} subtitle="Appels passés et reçus avec OnOff">
@@ -97,6 +126,22 @@ export default function Appels() {
       <div className="mb-3 flex flex-wrap gap-2">
         {[['tous', 'Tous'], ['emis', 'Émis'], ['recu', 'Reçus'], ['manque', 'Manqués'], ['vocal', 'Messages vocaux']].map(([k, l]) => (
           <button key={k} onClick={() => setFiltreType(k)} className={filtreType === k ? 'btn-accent' : 'btn'}>{l}</button>
+        ))}
+      </div>
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {[['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['hier', 'Hier']].map(([k, l]) => (
+          <button key={k} onClick={() => setFiltreJour(k)} className={filtreJour === k ? 'btn-accent' : 'btn'}>{l}</button>
+        ))}
+        <select value={filtrePersonne} onChange={(e) => setFiltrePersonne(e.target.value)} className="inp">
+          <option value="tous">Toutes les personnes</option>
+          {personnes.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}
+        </select>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {[['toutes', 'Toutes durées'], ['moins1', 'Moins de 1 min'], ['moins5', 'Moins de 5 min'], ['plus5', 'Plus de 5 min']].map(([k, l]) => (
+          <button key={k} onClick={() => setFiltreDuree(k)} className={filtreDuree === k ? 'btn-accent' : 'btn'}>{l}</button>
         ))}
       </div>
 
