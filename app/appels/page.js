@@ -42,8 +42,11 @@ export default function Appels() {
   const [leads, setLeads] = useState({})
   const [inconnus, setInconnus] = useState([])
   const [recherche, setRecherche] = useState('')
-  const [filtreType, setFiltreType] = useState('tous')
-  const [filtreJour, setFiltreJour] = useState('tous')     // tous | aujourdhui | hier
+  const [filtreTypes, setFiltreTypes] = useState([])      // choix multiple ; vide = tous les types
+  const [typeOuvert, setTypeOuvert] = useState(false)
+  const [filtreJour, setFiltreJour] = useState('tous')     // tous | aujourdhui | hier | perso
+  const [dateDebut, setDateDebut] = useState('')           // AAAA-MM-JJ (période personnalisée)
+  const [dateFin, setDateFin] = useState('')
   const [filtrePersonne, setFiltrePersonne] = useState('tous') // 'tous' ou id de l'agent
   const [filtreDuree, setFiltreDuree] = useState('toutes') // toutes | moins1 | moins5 | plus5
   const [err, setErr] = useState('')
@@ -88,14 +91,19 @@ export default function Appels() {
   ].sort((x, y) => new Date(y.created_at) - new Date(x.created_at))
   const liste = tous.filter((r) => !q || `${r.nom ?? ''} ${agents[r.user_id] ?? ''} ${r.numero_externe ?? ''} ${r.resultat}`.toLowerCase().includes(q))
 
-  // Début de journée (heure locale) pour « aujourd'hui » et « hier »
+  // Début de journée (heure locale) pour « aujourd'hui », « hier » et la période personnalisée
   const debutJour = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const JOUR = 24 * 3600 * 1000
   const auj = debutJour(new Date())
-  const hier = auj - 24 * 3600 * 1000
   const jourOk = (r) => {
-    if (filtreJour === 'tous') return true
     const t = new Date(r.created_at).getTime()
-    return filtreJour === 'aujourdhui' ? t >= auj : t >= hier && t < auj
+    if (filtreJour === 'aujourdhui') return t >= auj
+    if (filtreJour === 'hier') return t >= auj - JOUR && t < auj
+    if (filtreJour === 'perso') {
+      if (dateDebut && t < new Date(`${dateDebut}T00:00:00`).getTime()) return false
+      if (dateFin && t >= new Date(`${dateFin}T00:00:00`).getTime() + JOUR) return false // fin incluse
+    }
+    return true
   }
   const dureeOk = (r) => {
     if (filtreDuree === 'toutes') return true
@@ -111,10 +119,20 @@ export default function Appels() {
     .sort((a, b) => a.nom.localeCompare(b.nom))
 
   const listeFiltree = liste
-    .filter((r) => filtreType === 'tous' || typeAppel(r) === filtreType)
+    .filter((r) => !filtreTypes.length || filtreTypes.includes(typeAppel(r)))
     .filter(jourOk)
     .filter((r) => filtrePersonne === 'tous' || r.user_id === filtrePersonne)
     .filter(dureeOk)
+
+  const basculerType = (k) => setFiltreTypes((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))
+  const libelleTypes = !filtreTypes.length ? 'Tous les types'
+    : filtreTypes.length <= 2 ? filtreTypes.map((k) => TYPES[k].label).join(', ')
+    : `${filtreTypes.length} types`
+  const filtresActifs = filtreJour !== 'tous' || filtrePersonne !== 'tous' || filtreDuree !== 'toutes' || filtreTypes.length > 0
+  const reinitialiser = () => {
+    setFiltreJour('tous'); setDateDebut(''); setDateFin('')
+    setFiltrePersonne('tous'); setFiltreDuree('toutes'); setFiltreTypes([])
+  }
 
   return (
     <AppShell title={`Appels (${listeFiltree.length})`} subtitle="Appels passés et reçus avec OnOff">
@@ -123,26 +141,74 @@ export default function Appels() {
         <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher (nom, agent, numéro, résultat)…" className="inp w-full" />
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-2">
-        {[['tous', 'Tous'], ['emis', 'Émis'], ['recu', 'Reçus'], ['manque', 'Manqués'], ['vocal', 'Messages vocaux']].map(([k, l]) => (
-          <button key={k} onClick={() => setFiltreType(k)} className={filtreType === k ? 'btn-accent' : 'btn'}>{l}</button>
-        ))}
-      </div>
+      <div className="card mb-4 p-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label className="field-label">Période</label>
+            <select value={filtreJour} onChange={(e) => setFiltreJour(e.target.value)} className="inp">
+              <option value="tous">Toutes les dates</option>
+              <option value="aujourdhui">Aujourd'hui</option>
+              <option value="hier">Hier</option>
+              <option value="perso">Personnalisée…</option>
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Personne</label>
+            <select value={filtrePersonne} onChange={(e) => setFiltrePersonne(e.target.value)} className="inp">
+              <option value="tous">Toutes les personnes</option>
+              {personnes.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Durée</label>
+            <select value={filtreDuree} onChange={(e) => setFiltreDuree(e.target.value)} className="inp">
+              <option value="toutes">Toutes les durées</option>
+              <option value="moins1">Moins de 1 minute</option>
+              <option value="moins5">Moins de 5 minutes</option>
+              <option value="plus5">Plus de 5 minutes</option>
+            </select>
+          </div>
+          <div className="relative">
+            <label className="field-label">Type d'appel</label>
+            <button type="button" onClick={() => setTypeOuvert((o) => !o)} className="inp flex items-center justify-between text-left">
+              <span className="truncate">{libelleTypes}</span>
+              <span aria-hidden className="ml-2 text-[11px]" style={{ color: 'var(--muted)' }}>▾</span>
+            </button>
+            {typeOuvert && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setTypeOuvert(false)} />
+                <div className="card absolute left-0 right-0 z-20 mt-1 p-1 shadow-lg">
+                  {Object.entries(TYPES).map(([k, t]) => (
+                    <label key={k} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm hover:bg-black/5">
+                      <input type="checkbox" checked={filtreTypes.includes(k)} onChange={() => basculerType(k)} className="h-4 w-4" style={{ accentColor: 'var(--ink)' }} />
+                      <IconeAppel type={k} />
+                      {t.label}
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        {[['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['hier', 'Hier']].map(([k, l]) => (
-          <button key={k} onClick={() => setFiltreJour(k)} className={filtreJour === k ? 'btn-accent' : 'btn'}>{l}</button>
-        ))}
-        <select value={filtrePersonne} onChange={(e) => setFiltrePersonne(e.target.value)} className="inp">
-          <option value="tous">Toutes les personnes</option>
-          {personnes.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}
-        </select>
-      </div>
+        {filtreJour === 'perso' && (
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label className="field-label">Du</label>
+              <input type="date" value={dateDebut} max={dateFin || undefined} onChange={(e) => setDateDebut(e.target.value)} className="inp" />
+            </div>
+            <div>
+              <label className="field-label">Au</label>
+              <input type="date" value={dateFin} min={dateDebut || undefined} onChange={(e) => setDateFin(e.target.value)} className="inp" />
+            </div>
+          </div>
+        )}
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {[['toutes', 'Toutes durées'], ['moins1', 'Moins de 1 min'], ['moins5', 'Moins de 5 min'], ['plus5', 'Plus de 5 min']].map(([k, l]) => (
-          <button key={k} onClick={() => setFiltreDuree(k)} className={filtreDuree === k ? 'btn-accent' : 'btn'}>{l}</button>
-        ))}
+        {filtresActifs && (
+          <div className="mt-3 flex justify-end">
+            <button type="button" onClick={reinitialiser} className="btn-ghost">Réinitialiser les filtres</button>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
