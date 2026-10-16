@@ -10,7 +10,8 @@ import { missingFields } from '@/lib/importFields'
 const PAGE = 50
 const TXT = '#000'
 const fmtDate = (v) => (v ? new Date(v).toLocaleDateString('fr-FR') : '—')
-const HEADS = ["Date d'import", 'Contact', 'Téléphone', 'Ville', 'Fichier', 'Champs manquants', 'Actions']
+const HEADS = ['Date de création', 'Contact', 'Téléphone', 'Dernier appel', 'Statut', 'Actions', 'Installateur', "Date d'installation"]
+const cle9 = (n) => String(n ?? '').replace(/\D/g, '').slice(-9)
 
 export default function ListeImport() {
   const router = useRouter()
@@ -22,6 +23,7 @@ export default function ListeImport() {
   const [fichier, setFichier] = useState('')
   const [fichiers, setFichiers] = useState([])
   const [err, setErr] = useState('')
+  const [derniers, setDerniers] = useState({})
   const [showImport, setShowImport] = useState(false)
   const isAdmin = role === 'admin'
 
@@ -50,6 +52,10 @@ export default function ListeImport() {
     setErr('')
     setRows(data ?? [])
     setTotal(count ?? 0)
+    const { data: ap } = await supabase.from('appels_non_rattaches').select('numero_externe, resultat, created_at').order('created_at', { ascending: false }).limit(1000)
+    const d = {}
+    for (const a of ap ?? []) { const k = cle9(a.numero_externe); if (k && !d[k]) d[k] = a.resultat }
+    setDerniers(d)
   }, [page, fichier, recherche])
 
   useEffect(() => { const t = setTimeout(charger, 250); return () => clearTimeout(t) }, [charger])
@@ -125,21 +131,18 @@ export default function ListeImport() {
           <tbody>
             {rows.map((r, i) => {
               const manque = missingFields(r)
+              const dernier = [r.mobile, r.telephone_1, r.telephone_2].map(cle9).map((k) => derniers[k]).find(Boolean)
               return (
                 <tr key={r.id} className="transition-colors hover:bg-black/[0.03]" style={{ borderTop: '1px solid var(--border)', background: i % 2 ? 'rgba(0,0,0,0.012)' : 'transparent' }}>
-                  <td className="whitespace-nowrap p-3" style={{ color: TXT }}>{fmtDate(r.created_at)}</td>
-                  <td className="p-3 font-medium" style={{ color: TXT }}>{[r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || '—'}</td>
+                  <td className="whitespace-nowrap p-3" style={{ color: TXT, borderLeft: '3px solid var(--status-perdu)' }}>{fmtDate(r.created_at)}</td>
+                  <td className="p-3 font-medium" style={{ color: TXT }}>
+                    {[r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || '—'}
+                    {manque.length > 0 && <span className="mt-0.5 block text-[11px] font-normal" style={{ color: TXT }}>À compléter : {manque.join(', ')}</span>}
+                  </td>
                   <td className="font-mono-data whitespace-nowrap p-3 text-[13px]" style={{ color: TXT }}>{r.mobile || r.telephone_1 || '—'}</td>
-                  <td className="p-3" style={{ color: TXT }}>{r.ville || '—'}</td>
-                  <td className="max-w-[160px] truncate p-3" style={{ color: TXT }} title={r.fichier ?? ''}>{r.fichier || '—'}</td>
+                  <td className="p-3" style={{ color: TXT }}>{dernier ?? '—'}</td>
                   <td className="p-3">
-                    {manque.length === 0 ? <span style={{ color: TXT }}>Complet</span> : (
-                      <div className="flex flex-wrap gap-1">
-                        {manque.map((m) => (
-                          <span key={m} className="rounded-md px-2 py-0.5 text-[11px] font-medium" style={{ background: 'var(--accent-soft)', color: 'var(--ink)' }}>{m}</span>
-                        ))}
-                      </div>
-                    )}
+                    <span className="inline-block rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: 'var(--status-perdu)' }}>En attente</span>
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-3 whitespace-nowrap">
@@ -151,6 +154,8 @@ export default function ListeImport() {
                       )}
                     </div>
                   </td>
+                  <td className="p-3" style={{ color: TXT }}>—</td>
+                  <td className="p-3" style={{ color: TXT }}>—</td>
                 </tr>
               )
             })}
