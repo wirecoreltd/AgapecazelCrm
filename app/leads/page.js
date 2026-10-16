@@ -214,6 +214,7 @@ export default function Leads() {
 
   return (
     <AppShell
+      wide
       title={`Leads (${rows.length})`}
       subtitle={isAdmin ? 'Vue admin' : undefined}
       actions={<Link href="/leads/new" className="btn-accent">Nouveau lead</Link>}
@@ -265,6 +266,7 @@ export default function Leads() {
               <MetaItem label="Dernier appel" value={derniersAppels[l.id] ?? '—'} />
               {isAdmin && <MetaItem label="Agent" value={agentsMap[l.agent_id] ?? '—'} />}
               <MetaItem label="Installateur" value={l.installateur || '—'} />
+              <MetaItem label="Création" value={fmtDate(l.created_at)} />
               <MetaItem label="Installation" value={fmtDate(l.date_installation)} />
             </dl>
             <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: 'var(--border)' }}>
@@ -282,7 +284,7 @@ export default function Leads() {
         <table className="w-full text-left text-sm">
           <thead>
             <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
-              {['Contact', 'Téléphone', 'Dernier appel', 'Statut', 'Actions', ...(isAdmin ? ['Agent'] : []), 'Installateur', "Date d'installation"].map((h) => (
+              {['Contact', 'Téléphone', 'Dernier appel', 'Statut', 'Actions', ...(isAdmin ? ['Agent'] : []), 'Installateur', 'Date de création', "Date d'installation"].map((h) => (
                 <th key={h} className="p-3 text-[13px] font-medium" style={{ color: 'var(--muted)' }}>{h}</th>
               ))}
             </tr>
@@ -309,11 +311,12 @@ export default function Leads() {
                 </td>
                 {isAdmin && <td className="p-3" style={{ color: 'var(--muted)' }}>{agentsMap[l.agent_id] ?? '—'}</td>}
                 <td className="p-3" style={{ color: 'var(--muted)' }}>{l.installateur || '—'}</td>
-                <td className="p-3" style={{ color: 'var(--muted)' }}>{fmtDate(l.date_installation)}</td>
+                <td className="p-3 whitespace-nowrap" style={{ color: 'var(--muted)' }}>{fmtDate(l.created_at)}</td>
+                <td className="p-3 whitespace-nowrap" style={{ color: 'var(--muted)' }}>{fmtDate(l.date_installation)}</td>
               </tr>
             ))}
             {!rows.length && (
-              <tr><td colSpan={isAdmin ? 8 : 7} className="p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun lead pour le moment.</td></tr>
+              <tr><td colSpan={isAdmin ? 9 : 8} className="p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun lead pour le moment.</td></tr>
             )}
           </tbody>
         </table>
