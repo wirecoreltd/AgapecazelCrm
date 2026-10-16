@@ -32,7 +32,7 @@ function Logo() {
   )
 }
 
-export default function AppShell({ title, subtitle, backHref, backLabel = 'Retour', actions, children }) {
+export default function AppShell({ title, subtitle, backHref, backLabel = 'Retour', actions, wide = false, children }) {
   const router = useRouter()
   const pathname = usePathname()
   const [role, setRole] = useState(null)
@@ -78,7 +78,7 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 shadow-sm" style={{ background: 'var(--ink)', borderBottom: '3px solid var(--accent)' }}>
-        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3 sm:px-6">
+        <div className={`mx-auto flex items-center gap-2 px-4 py-3 sm:px-6 ${wide ? 'max-w-[1800px]' : 'max-w-6xl'}`}>
           <Link href="/leads" className="mr-2">
             <Logo />
           </Link>
@@ -140,7 +140,7 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
         )}
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className={`mx-auto px-4 py-6 sm:px-6 sm:py-8 ${wide ? 'max-w-[1800px] sm:px-4' : 'max-w-6xl'}`}>
         {(title || backHref) && (
           <div className="mb-6">
             {backHref && (
