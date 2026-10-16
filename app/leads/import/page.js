@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
@@ -86,10 +87,14 @@ export default function ListeImport() {
   return (
     <AppShell
       wide
-      backHref="/leads"
-      title={`Liste d'import (${total})`}
+      title={`Liste temporaire (${total})`}
       subtitle="Contacts à compléter avant de les ajouter au CRM"
-      actions={isAdmin && <button type="button" onClick={() => setShowImport((s) => !s)} className="btn-accent">Importer un fichier</button>}
+      actions={
+        <>
+          <Link href="/leads" className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>Leads</Link>
+          {isAdmin && <button type="button" onClick={() => setShowImport((s) => !s)} className="btn-accent">Importer un fichier</button>}
+        </>
+      }
     >
       {showImport && isAdmin && (
         <ImportPanel onClose={() => setShowImport(false)} onDone={() => { setPage(0); charger(); chargerFichiers() }} />
