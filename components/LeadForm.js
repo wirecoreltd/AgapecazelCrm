@@ -179,6 +179,7 @@ export default function LeadForm({ lead }) {
       {role === 'admin' && (
         <Section title="Attribution">
           <Select
+            key={`agent-${agents.length}`}
             name="agent_id"
             label="Agent associé"
             value={src?.agent_id}
