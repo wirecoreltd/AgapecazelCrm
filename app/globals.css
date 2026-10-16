@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+:root {
+  /* Marine (couleur principale) */
+  --ink: #0f2a5e;
+  --ink-hover: #0a1f47;
+  --ink-soft: #2a4478;
+
+  /* Fonds */
+  --surface: #f6f4ee;   /* crème du site */
+  --card: #ffffff;
+  --border: #e6e2d6;
+  --border-strong: #cdc8b6;
+  --muted: #6b7080;
+
+  /* Or (accent) */
+  --accent: #c9a24d;
+  --accent-hover: #b48b38;
+  --accent-soft: #f5ecd3;
+
+  --danger: #b4483c;
+  --danger-soft: #fbeae8;
+  --success: #2f8f6b;
+
+  --status-nouveau: #361fa1;  
+  --status-installation_programmee: #a86614;
+  --status-installe: #0a7d40;
+  --status-perdu: #464547;
+  --status-retraiter: #b6c414;
+  --status-pas_interesse: #730ba3;  
+  --status-annule: #d63220;
+}
+
+body {
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-ui), system-ui, sans-serif;
+}
+
+::selection { background: var(--accent-soft); color: var(--ink); }
+
+.font-mono-data { font-family: var(--font-data), ui-monospace, monospace; }
+
+@layer components {
+  /* Inputs */
+  .inp {
+    @apply w-full rounded-lg bg-white px-3 py-2.5 text-[15px] text-[var(--ink)] transition-colors;
+    border: 1px solid var(--border-strong);
+  }
+  .inp:focus {
+    @apply outline-none;
+    border-color: var(--ink);
+    box-shadow: 0 0 0 3px rgba(15, 42, 94, 0.14);
+  }
+  .inp::placeholder { color: #9a9da8; }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    background: var(--ink);
+    color: white;
+  }
+  .btn:hover:not(:disabled) { background: var(--ink-hover); }
+
+  /* Bouton or : texte marine pour rester lisible sur l'or */
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    background: var(--accent);
+    color: var(--ink);
+  }
+  .btn-accent:hover:not(:disabled) { background: var(--accent-hover); }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[var(--ink)] transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    color: var(--danger);
+  }
+  .btn-danger:hover:not(:disabled) { background: var(--danger-soft); }
+
+  /* Cards / surfaces */
+  .card {
+    @apply rounded-xl bg-white;
+    border: 1px solid var(--border);
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-[13px] font-medium text-[var(--ink)];
+  }
+
+  .section-heading {
+    @apply text-base font-semibold;
+    color: var(--ink);
+  }
+
+  /* Status badge */
+  .status-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium text-white;
+  }
+}
