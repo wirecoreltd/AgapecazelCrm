@@ -87,6 +87,7 @@ export default function ListeImport() {
       actions={
         <>
           <Link href="/leads" className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>Leads</Link>
+          {isAdmin && <Link href="/leads/import/new" className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>Ajouter un contact</Link>}
           {isAdmin && <button type="button" onClick={() => setShowImport((s) => !s)} className="btn-accent">Importer un fichier</button>}
         </>
       }
