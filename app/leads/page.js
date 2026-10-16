@@ -224,7 +224,7 @@ export default function Leads() {
       subtitle={isAdmin ? 'Vue admin' : undefined}
       actions={
         <>
-          <Link href="/leads/import" className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>Liste d'import ({nbImport})</Link>
+          <Link href="/leads/import" className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>Liste temporaire ({nbImport})</Link>
           <Link
             href="/leads/new"
             className="btn-accent"
