@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 const OUI_NON = [['oui', 'Oui'], ['non', 'Non']]
-const CHAUFFAGES = ['gaz naturel', 'électrique', 'fioul', 'gaz condensation', 'bois', 'pas de chauffage', 'autre']
+const CHAUFFAGES = ['gaz naturel', 'électrique', 'fioul', 'gaz   condensation', 'bois', 'pas de chauffage', 'autre']
   .map((c) => [c, c[0].toUpperCase() + c.slice(1)])
 const yn = (v) => (v == null ? '' : v ? 'oui' : 'non')
 
@@ -208,8 +208,8 @@ export default function LeadForm({ lead }) {
 
       <Section title="Logement">
         <Select name="proprietaire" label="Propriétaire" required value={yn(src?.proprietaire)} options={OUI_NON} />
-        <Field name="nb_personnes" label="Nb de personnes" required type="number" value={src?.nb_personnes} />
-        <Field name="revenus" label="Revenus" value={src?.revenus} />
+        <Field name="nb_personnes" label="Nombre de personnes dans le foyer fiscal" required type="number" value={src?.nb_personnes} />
+        <Field name="revenus" label="Revenu du foyer fiscal (€)" value={src?.revenus} />
         <Select name="maison_plus_15_ans" label="Maison +15 ans" value={yn(src?.maison_plus_15_ans)} options={OUI_NON} />
         <Select name="type_habitat" label="Type d'habitat" required value={src?.type_habitat} options={[['maison', 'Maison'], ['appartement', 'Appartement']]} />
         <Field name="surface_habitable" label="Surface habitable (m²)" required type="number" value={src?.surface_habitable} />
