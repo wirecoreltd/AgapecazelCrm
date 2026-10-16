@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
 import ImportPanel from '@/components/ImportPanel'
-import { missingFields } from '@/lib/importFields'
+import { ajouterAuCrm } from '@/lib/importFields'
 
 const PAGE = 50
 const TXT = '#000'
@@ -61,18 +61,7 @@ export default function ListeImport() {
   useEffect(() => { const t = setTimeout(charger, 250); return () => clearTimeout(t) }, [charger])
   useEffect(() => { chargerFichiers() }, [])
 
-  const ajouter = (r) => {
-    const fiche = {
-      civilite: r.civilite, prenom: r.prenom, nom: r.nom, adresse: r.adresse, code_postal: r.code_postal,
-      ville: r.ville, mobile: r.mobile, telephone_1: r.telephone_1, telephone_2: r.telephone_2, email: r.email,
-      proprietaire: r.proprietaire === null ? null : r.proprietaire ? 'oui' : 'non',
-      nb_personnes: r.nb_personnes, revenus: r.revenus, maison_plus_15_ans: r.maison_plus_15_ans,
-      type_habitat: r.type_habitat, surface_habitable: r.surface_habitable, chauffage: r.chauffage,
-    }
-    sessionStorage.setItem('prefill_lead', JSON.stringify({ fiche, appels: [] }))
-    sessionStorage.setItem('import_lead_id', r.id)
-    router.push('/leads/new')
-  }
+  const ajouter = (r) => ajouterAuCrm(r, router)
 
   const supprimer = async (r) => {
     if (!confirm(`Retirer ${r.prenom ?? ''} ${r.nom ?? ''} de la liste ?`)) return
@@ -130,14 +119,12 @@ export default function ListeImport() {
           </thead>
           <tbody>
             {rows.map((r, i) => {
-              const manque = missingFields(r)
               const dernier = [r.mobile, r.telephone_1, r.telephone_2].map(cle9).map((k) => derniers[k]).find(Boolean)
               return (
                 <tr key={r.id} className="transition-colors hover:bg-black/[0.03]" style={{ borderTop: '1px solid var(--border)', background: i % 2 ? 'rgba(0,0,0,0.012)' : 'transparent' }}>
                   <td className="whitespace-nowrap p-3" style={{ color: TXT, borderLeft: '3px solid var(--status-perdu)' }}>{fmtDate(r.created_at)}</td>
                   <td className="p-3 font-medium" style={{ color: TXT }}>
                     {[r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || '—'}
-                    {manque.length > 0 && <span className="mt-0.5 block text-[11px] font-normal" style={{ color: TXT }}>À compléter : {manque.join(', ')}</span>}
                   </td>
                   <td className="font-mono-data whitespace-nowrap p-3 text-[13px]" style={{ color: TXT }}>{r.mobile || r.telephone_1 || '—'}</td>
                   <td className="p-3" style={{ color: TXT }}>{dernier ?? '—'}</td>
@@ -146,6 +133,12 @@ export default function ListeImport() {
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-3 whitespace-nowrap">
+                      <Link href={`/leads/import/${r.id}`} title="Voir" className="opacity-75 transition-opacity hover:opacity-100" style={{ color: 'var(--ink)' }}>
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M1 10s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.4" /></svg>
+                      </Link>
+                      <Link href={`/leads/import/${r.id}/edit`} title="Modifier" className="opacity-80 transition-opacity hover:opacity-100" style={{ color: 'var(--accent)' }}>
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M13.5 3.5l3 3L6 17H3v-3L13.5 3.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /></svg>
+                      </Link>
                       <button type="button" onClick={() => ajouter(r)} className="btn-accent !px-3 !py-1.5 !text-[12px]">Ajouter au CRM</button>
                       {isAdmin && (
                         <button type="button" onClick={() => supprimer(r)} title="Retirer de la liste" className="opacity-75 hover:opacity-100" style={{ color: 'var(--danger)' }}>
