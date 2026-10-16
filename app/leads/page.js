@@ -296,7 +296,10 @@ export default function Leads() {
                 className="transition-colors hover:bg-black/[0.03]"
                 style={{ borderTop: '1px solid var(--border)', background: i % 2 ? 'rgba(0,0,0,0.012)' : 'transparent' }}
               >
-                <td className="p-3 font-medium" style={{ borderLeft: `3px solid var(${STATUT_VARS[l.statut] ?? '--status-nouveau'})` }}>
+                <td className="p-3 whitespace-nowrap" style={{ color: 'var(--muted)', borderLeft: `3px solid var(${STATUT_VARS[l.statut] ?? '--status-nouveau'})` }}>
+                  {fmtDate(l.created_at)}
+                </td>
+                <td className="p-3 font-medium">
                   {l.civilite} {l.prenom} {l.nom}
                 </td>
                 <td className="font-mono-data p-3 text-[13px]">{l.mobile || l.telephone_1 || '—'}</td>
@@ -311,12 +314,6 @@ export default function Leads() {
                 </td>
                 {isAdmin && <td className="p-3" style={{ color: 'var(--muted)' }}>{agentsMap[l.agent_id] ?? '—'}</td>}
                 <td className="p-3" style={{ color: 'var(--muted)' }}>{l.installateur || '—'}</td>
-                <td className="p-3 whitespace-nowrap" style={{ color: 'var(--muted)', borderLeft: `3px solid var(${STATUT_VARS[l.statut] ?? '--status-nouveau'})` }}>
-                  {fmtDate(l.created_at)}
-                </td>
-                <td className="p-3 font-medium">
-                  {l.civilite} {l.prenom} {l.nom}
-                </td>
                 <td className="p-3 whitespace-nowrap" style={{ color: 'var(--muted)' }}>{fmtDate(l.date_installation)}</td>
               </tr>
             ))}
