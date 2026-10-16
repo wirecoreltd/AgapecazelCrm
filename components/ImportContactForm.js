@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { cleanPhone } from '@/lib/importFields'
 
 const OUI_NON = [['oui', 'Oui'], ['non', 'Non']]
 const CHAUFFAGES = ['gaz naturel', 'électrique', 'fioul', 'gaz condensation', 'bois', 'pas de chauffage', 'autre']
@@ -36,8 +37,9 @@ function Section({ title, children }) {
   )
 }
 
-// Contact de la liste temporaire : aucun champ obligatoire, sauf un numéro (mobile ou téléphone 1)
-export default function ImportContactForm({ row }) {
+// Contact de la liste temporaire (création si `row` est absent, sinon modification)
+// Aucun champ obligatoire, sauf un numéro (mobile ou téléphone 1)
+export default function ImportContactForm({ row = {} }) {
   const router = useRouter()
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
@@ -46,6 +48,10 @@ export default function ImportContactForm({ row }) {
     e.preventDefault(); setBusy(true); setMsg('')
     const raw = Object.fromEntries(new FormData(e.target))
     const f = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, typeof v === 'string' && v.trim() === '' ? null : v]))
+
+    f.mobile = cleanPhone(f.mobile)
+    f.telephone_1 = cleanPhone(f.telephone_1)
+    f.telephone_2 = cleanPhone(f.telephone_2)
 
     if (!f.mobile?.trim() && !f.telephone_1?.trim()) {
       setBusy(false)
@@ -56,12 +62,26 @@ export default function ImportContactForm({ row }) {
     if (dupErr) { setBusy(false); return setMsg(`Erreur : ${dupErr.message}`) }
     if (dup?.length) { setBusy(false); return setMsg('Ce numéro existe déjà dans le CRM.') }
 
+    // Doublon dans la liste temporaire
+    let q = supabase.from('leads_import').select('id').limit(1)
+    q = q.or(numeros.map((n) => `mobile.eq.${n},telephone_1.eq.${n},telephone_2.eq.${n}`).join(','))
+    if (row.id) q = q.neq('id', row.id)
+    const { data: dupImport } = await q
+    if (dupImport?.length) { setBusy(false); return setMsg('Ce numéro existe déjà dans la liste temporaire.') }
+
     const data = {
       ...f,
       proprietaire: f.proprietaire ? f.proprietaire === 'oui' : null,
       maison_plus_15_ans: f.maison_plus_15_ans ? f.maison_plus_15_ans === 'oui' : null,
       nb_personnes: f.nb_personnes ? Math.round(Number(f.nb_personnes)) : null,
       surface_habitable: f.surface_habitable ? Number(f.surface_habitable) : null,
+    }
+    if (!row.id) {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { error: insErr } = await supabase.from('leads_import').insert({ ...data, fichier: 'Saisie manuelle', imported_by: user.id })
+      setBusy(false)
+      if (insErr) return setMsg(`Erreur : ${insErr.message}`)
+      return router.push('/leads/import')
     }
     const { data: maj, error } = await supabase.from('leads_import').update(data).eq('id', row.id).select()
     setBusy(false)
@@ -97,7 +117,7 @@ export default function ImportContactForm({ row }) {
         <Select name="chauffage" label="Type de chauffage" value={row.chauffage} options={CHAUFFAGES} />
       </Section>
       <div className="flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center" style={{ borderColor: 'var(--border)' }}>
-        <button disabled={busy} className="btn-accent">Enregistrer les modifications</button>
+        <button disabled={busy} className="btn-accent">{row.id ? 'Enregistrer les modifications' : 'Ajouter à la liste'}</button>
         {msg && <p className="text-sm" style={{ color: 'var(--danger)' }}>{msg}</p>}
       </div>
     </form>
