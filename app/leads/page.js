@@ -284,8 +284,8 @@ export default function Leads() {
         <table className="w-full text-left text-sm">
           <thead>
             <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
-              {['Contact', 'Téléphone', 'Dernier appel', 'Statut', 'Actions', ...(isAdmin ? ['Agent'] : []), 'Installateur', 'Date de création', "Date d'installation"].map((h) => (
-                <th key={h} className="p-3 text-[13px] font-medium" style={{ color: 'var(--muted)' }}>{h}</th>
+              {['Date de création', 'Contact', 'Téléphone', 'Dernier appel', 'Statut', 'Actions', ...(isAdmin ? ['Agent'] : []), 'Installateur', "Date d'installation"].map((h) => (
+                <th key={h} className="p-3 text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -311,7 +311,12 @@ export default function Leads() {
                 </td>
                 {isAdmin && <td className="p-3" style={{ color: 'var(--muted)' }}>{agentsMap[l.agent_id] ?? '—'}</td>}
                 <td className="p-3" style={{ color: 'var(--muted)' }}>{l.installateur || '—'}</td>
-                <td className="p-3 whitespace-nowrap" style={{ color: 'var(--muted)' }}>{fmtDate(l.created_at)}</td>
+                <td className="p-3 whitespace-nowrap" style={{ color: 'var(--muted)', borderLeft: `3px solid var(${STATUT_VARS[l.statut] ?? '--status-nouveau'})` }}>
+                  {fmtDate(l.created_at)}
+                </td>
+                <td className="p-3 font-medium">
+                  {l.civilite} {l.prenom} {l.nom}
+                </td>
                 <td className="p-3 whitespace-nowrap" style={{ color: 'var(--muted)' }}>{fmtDate(l.date_installation)}</td>
               </tr>
             ))}
