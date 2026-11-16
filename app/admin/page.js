@@ -56,7 +56,7 @@ function ResetPasswordModal({ user, onClose }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="card max-h-[90vh] w-full max-w-sm overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
         <h2 className="section-heading mb-1">Réinitialiser le mot de passe</h2>
         <p className="mb-4 text-[13px]" style={{ color: 'var(--muted)' }}>{user.nom_complet} — {user.email}</p>
 
@@ -117,7 +117,7 @@ function EditUserModal({ user, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <form className="card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()} onSubmit={enregistrer}>
+      <form className="card max-h-[90vh] w-full max-w-sm overflow-y-auto p-5" onClick={(e) => e.stopPropagation()} onSubmit={enregistrer}>
         <h2 className="section-heading mb-4">Modifier l'utilisateur</h2>
         <div className="space-y-3">
           <label className="block">
@@ -241,7 +241,7 @@ export default function Admin() {
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg p-2.5 text-sm" style={{ background: 'var(--surface)' }}>
                 <span className="font-medium">{u.nom_complet}</span>
                 <span className="text-[12px]" style={{ color: 'var(--muted)' }}>{u.email}</span>
-                <span className="flex items-center gap-2">
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="rounded-full px-2 py-0.5 text-[11px] font-medium text-white" style={{ background: u.role === 'admin' ? 'var(--ink)' : 'var(--status-nouveau)' }}>{roleLabel(u.role)}</span>
                   <span className="text-[11px]" style={{ color: 'var(--muted)' }}>{modulesOf(u.role, u.modules).map((k) => MODULES[k].label).join(' + ')}</span>
                   <button
