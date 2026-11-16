@@ -74,7 +74,7 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
 
   // Liens du menu : ceux du CRM courant + pages communes, filtrés par rôle ET par module
   const items = (courant === 'defisc'
-    ? [['/defisc', 'Rendez-vous'], ['/defisc/import', 'Import']]
+    ? [['/defisc', 'Leads'], ['/defisc/import', 'Import']]
     : [['/leads', 'Leads'], ['/appels', 'Appels'], ['/stats', 'Statistiques']]
   ).concat([['/admin', 'Espace admin'], ['/logs', 'Historique']])
     .filter(([href]) => canAccess(role, href, modules))
@@ -195,11 +195,11 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
             )}
             {title && (
               <div className="flex flex-wrap items-center gap-3">
-                <div className="mr-auto">
-                  <h1 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{title}</h1>
+                <div className="mr-auto min-w-0">
+                  <h1 className="break-words text-xl font-bold sm:text-2xl" style={{ color: 'var(--ink)' }}>{title}</h1>
                   {subtitle && <p className="mt-0.5 text-sm" style={{ color: 'var(--muted)' }}>{subtitle}</p>}
                 </div>
-                {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+                {actions && <div className="flex flex-wrap items-center gap-2 max-sm:w-full [&>*]:max-sm:flex-1">{actions}</div>}
               </div>
             )}
           </div>
