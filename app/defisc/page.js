@@ -115,10 +115,9 @@ export default function DefiscListe() {
             {filtrees.map((r) => {
               const urg = urgence(r)
               return (
-              <tr key={r.id} className="border-b last:border-0" style={{ borderColor: 'var(--border)', background: urg ? 'var(--danger-soft)' : undefined }}>
+              <tr key={r.id} className="border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
                 <td className="whitespace-nowrap px-3 py-2.5 font-medium" style={urg ? { boxShadow: 'inset 5px 0 0 var(--danger)' } : undefined}>
                   {fmtDate(r.date_rdv)}
-                  {urg && <div className="text-[11px] font-semibold" style={{ color: 'var(--danger)' }}>{urg === 'demain' ? 'Demain' : "Aujourd'hui"}</div>}
                 </td>
                 <td className="px-3 py-2.5">{r.heure_rdv?.slice(0, 5) ?? '—'}</td>
                 <td className="px-3 py-2.5"><Link href={`/defisc/${r.id}`} className="font-medium underline-offset-2 hover:underline">{[r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || '—'}</Link></td>
@@ -127,9 +126,13 @@ export default function DefiscListe() {
                 <td className="px-3 py-2.5">{r.type_rdv ?? '—'}</td>
                 <td className="px-3 py-2.5">{r.nature ?? '—'}</td>
                 <td className="px-3 py-2.5">
-                  <select value={r.statut} onChange={(e) => changerStatut(r.id, e.target.value)} className="w-full rounded-lg border-0 px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS[r.statut]?.color, colorScheme: 'light' }}>
-                    {STATUT_KEYS.map((s) => <option key={s} value={s} style={{ color: '#1e293b', background: '#fff' }}>{STATUTS[s].label}</option>)}
-                  </select>
+                  {role === 'admin' ? (
+                    <select value={r.statut} onChange={(e) => changerStatut(r.id, e.target.value)} className="w-full rounded-lg border-0 px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS[r.statut]?.color, colorScheme: 'light' }}>
+                      {STATUT_KEYS.map((s) => <option key={s} value={s} style={{ color: '#1e293b', background: '#fff' }}>{STATUTS[s].label}</option>)}
+                    </select>
+                  ) : (
+                    <span className="inline-block rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS[r.statut]?.color ?? '#666' }}>{STATUTS[r.statut]?.label ?? r.statut}</span>
+                  )}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5">
                   <Link href={`/defisc/${r.id}`} className="mr-3 text-[12px] font-medium underline" style={{ color: 'var(--accent)' }}>Modifier</Link>
