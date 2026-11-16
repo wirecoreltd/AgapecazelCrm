@@ -6,7 +6,6 @@ import AppShell from '@/components/AppShell'
 import LeadForm from '@/components/LeadForm'
 import DocumentManager from '@/components/DocumentManager'
 import CallLog from '@/components/CallLog'
-import WhatsAppMessage from '@/components/WhatsAppMessage'
 
 export default function EditLead() {
   const { id } = useParams()
@@ -26,7 +25,6 @@ export default function EditLead() {
           Lead enregistré. Vous pouvez maintenant ajouter des documents ou un appel ci-dessous.
         </p>
       )}
-      {cree && lead && <WhatsAppMessage lead={lead} />}
       {lead ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="card p-4 sm:p-6 lg:col-span-2">
