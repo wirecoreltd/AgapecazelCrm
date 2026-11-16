@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
-import { STATUTS } from '@/lib/defisc'
+import { STATUTS, estVerrouillee } from '@/lib/defisc'
 
 const date = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : null)
 
@@ -27,9 +27,13 @@ function Bloc({ titre, lignes }) {
 export default function DetailsFiche() {
   const { id } = useParams()
   const [f, setF] = useState(null)
+  const [role, setRole] = useState(null)
   const [msg, setMsg] = useState('Chargement…')
 
   useEffect(() => { (async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    setRole(p?.role ?? null)
     const { data, error } = await supabase.from('defisc_leads').select('*').eq('id', id).single()
     data ? setF(data) : setMsg(error?.message ?? 'Fiche introuvable.')
   })() }, [id])
@@ -37,7 +41,7 @@ export default function DetailsFiche() {
   const nom = f ? [f.civilite, f.prenom, f.nom].filter(Boolean).join(' ') : ''
   return (
     <AppShell backHref="/defisc" title={nom || 'Détails'}
-      actions={f && <Link href={`/defisc/${f.id}`} className="btn-accent">Modifier</Link>}
+      actions={f && !estVerrouillee(f.statut, role) && <Link href={`/defisc/${f.id}`} className="btn-accent">Modifier</Link>}
       subtitle={f ? STATUTS[f.statut]?.label : undefined}>
       {!f ? <p style={{ color: 'var(--muted)' }}>{msg}</p> : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
