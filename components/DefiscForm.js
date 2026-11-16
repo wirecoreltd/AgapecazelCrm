@@ -21,8 +21,8 @@ function Section({ title, children }) {
     </div>
   )
 }
-const NOMBRES = ['age', 'enfants', 'revenus_annuels', 'impots', 'credit_loyer', 'endettement', 'epargne', 'capacite_epargne']
-const TEXTES = ['civilite', 'nom', 'prenom', 'email', 'type_rdv', 'nature', 'lieu_rdv', 'situation_familiale', 'profession', 'interet', 'commentaire', 'verif', 'notes']
+// Seuls les champs affichés dans le formulaire sont envoyés : le profil financier (importé) n'est jamais écrasé
+const TEXTES = ['civilite', 'nom', 'prenom', 'email', 'type_rdv', 'nature', 'lieu_rdv', 'commentaire', 'verif', 'notes']
 
 // fiche : fiche existante (modification) ou undefined (création)
 export default function DefiscForm({ fiche }) {
@@ -48,7 +48,6 @@ export default function DefiscForm({ fiche }) {
     const f = Object.fromEntries(new FormData(e.target))
     const data = {}
     for (const k of TEXTES) data[k] = String(f[k] ?? '').trim() || null
-    for (const k of NOMBRES) { const v = String(f[k] ?? '').replace(/\s/g, '').replace(',', '.'); data[k] = v === '' || isNaN(Number(v)) ? null : Number(v) }
     data.mobile = normFR(f.mobile) || null
     data.fixe = normFR(f.fixe) || null
     data.date_rdv = f.date_rdv || null
@@ -106,20 +105,6 @@ export default function DefiscForm({ fiche }) {
             </select>
           </label>
         )}
-      </Section>
-
-      <Section title="Profil financier">
-        <Field name="age" label="Âge" type="number" value={v('age')} />
-        <Field name="situation_familiale" label="Situation familiale" value={v('situation_familiale')} />
-        <Field name="enfants" label="Enfants" type="number" value={v('enfants')} />
-        <Field name="profession" label="Profession" value={v('profession')} />
-        <Field name="revenus_annuels" label="Revenus annuels nets (€)" type="number" step="any" value={v('revenus_annuels')} />
-        <Field name="impots" label="Impôts sur le revenu (€)" type="number" step="any" value={v('impots')} />
-        <Field name="credit_loyer" label="Crédit / loyer / RP (€)" type="number" step="any" value={v('credit_loyer')} />
-        <Field name="endettement" label="Endettement (%)" type="number" step="any" value={v('endettement')} />
-        <Field name="epargne" label="Épargne (€)" type="number" step="any" value={v('epargne')} />
-        <Field name="capacite_epargne" label="Capacité d'épargne (€)" type="number" step="any" value={v('capacite_epargne')} />
-        <div className="sm:col-span-2"><Field name="interet" label="Intérêt exprimé" value={v('interet')} /></div>
       </Section>
 
       <Section title="Suivi">
