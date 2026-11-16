@@ -52,7 +52,7 @@ export default function DefiscForm({ fiche }) {
     data.fixe = normFR(f.fixe) || null
     data.date_rdv = f.date_rdv || null
     data.heure_rdv = f.heure_rdv || null
-    data.statut = f.statut || 'a_confirmer'
+    if (role === 'admin') data.statut = f.statut || 'a_confirmer' // statut : admin seulement (nouvelle fiche = « À confirmer » par défaut)
     if (role === 'admin') data.assigned_to = f.assigned_to || null
 
     let error
@@ -90,12 +90,14 @@ export default function DefiscForm({ fiche }) {
         <Field name="type_rdv" label="Type de RDV (Visio, présentiel…)" value={v('type_rdv')} />
         <Field name="nature" label="Nature (IMMO…)" value={v('nature')} />
         <Field name="lieu_rdv" label="Lieu" value={v('lieu_rdv')} />
-        <label className="block">
-          <span className="field-label">Statut</span>
-          <select name="statut" defaultValue={v('statut') ?? 'a_confirmer'} className="inp">
-            {STATUT_KEYS.map((k) => <option key={k} value={k}>{STATUTS[k].label}</option>)}
-          </select>
-        </label>
+        {role === 'admin' && (
+          <label className="block">
+            <span className="field-label">Statut</span>
+            <select name="statut" defaultValue={v('statut') ?? 'a_confirmer'} className="inp">
+              {STATUT_KEYS.map((k) => <option key={k} value={k}>{STATUTS[k].label}</option>)}
+            </select>
+          </label>
+        )}
         {role === 'admin' && (
           <label className="block">
             <span className="field-label">Conseiller</span>
