@@ -6,7 +6,12 @@ import AppShell from '@/components/AppShell'
 import { STATUTS, STATUT_KEYS } from '@/lib/defisc'
 
 const fmtDate = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR') : '—')
-const iso = (d) => d.toISOString().slice(0, 10)
+// Date locale AAAA-MM-JJ (toISOString donnerait la date UTC, décalée la nuit)
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const decaler = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d) }
+// RDV à venir dans moins de 24 h ou aujourd'hui (et pas déjà traité) -> alerte rouge
+const ACTIFS = ['a_confirmer', 'confirme', 'reporte']
+const urgence = (r) => (ACTIFS.includes(r.statut) && r.date_rdv === decaler(1) ? 'demain' : ACTIFS.includes(r.statut) && r.date_rdv === decaler(0) ? 'aujourdhui' : null)
 const PERIODES = [['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['semaine', 'Cette semaine'], ['avenir', 'À venir']]
 
 export default function DefiscListe() {
@@ -103,20 +108,24 @@ export default function DefiscListe() {
         <table className="w-full text-left text-[13px]">
           <thead>
             <tr className="border-b text-[11px] uppercase tracking-wide" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>
-              {['Date', 'Heure', 'Client', 'Contact', 'Type', 'Nature', 'Revenus', 'Épargne', 'Statut', ''].map((h) => <th key={h} className="px-3 py-2.5 font-medium">{h}</th>)}
+              {['Date', 'Heure', 'Client', 'Mobile', 'E-mail', 'Type', 'Nature', 'Statut', ''].map((h) => <th key={h} className="px-3 py-2.5 font-medium">{h}</th>)}
             </tr>
           </thead>
           <tbody>
-            {filtrees.map((r) => (
-              <tr key={r.id} className="border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
-                <td className="whitespace-nowrap px-3 py-2.5 font-medium">{fmtDate(r.date_rdv)}</td>
+            {filtrees.map((r) => {
+              const urg = urgence(r)
+              return (
+              <tr key={r.id} className="border-b last:border-0" style={{ borderColor: 'var(--border)', background: urg ? 'var(--danger-soft)' : undefined }}>
+                <td className="whitespace-nowrap px-3 py-2.5 font-medium" style={urg ? { boxShadow: 'inset 5px 0 0 var(--danger)' } : undefined}>
+                  {fmtDate(r.date_rdv)}
+                  {urg && <div className="text-[11px] font-semibold" style={{ color: 'var(--danger)' }}>{urg === 'demain' ? 'Demain' : "Aujourd'hui"}</div>}
+                </td>
                 <td className="px-3 py-2.5">{r.heure_rdv?.slice(0, 5) ?? '—'}</td>
                 <td className="px-3 py-2.5"><Link href={`/defisc/${r.id}`} className="font-medium underline-offset-2 hover:underline">{[r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || '—'}</Link></td>
-                <td className="px-3 py-2.5"><div>{r.mobile ?? r.fixe ?? '—'}</div><div className="text-[12px]" style={{ color: 'var(--muted)' }}>{r.email}</div></td>
+                <td className="whitespace-nowrap px-3 py-2.5">{r.mobile ?? r.fixe ?? '—'}</td>
+                <td className="px-3 py-2.5">{r.email ?? '—'}</td>
                 <td className="px-3 py-2.5">{r.type_rdv ?? '—'}</td>
                 <td className="px-3 py-2.5">{r.nature ?? '—'}</td>
-                <td className="whitespace-nowrap px-3 py-2.5">{r.revenus_annuels != null ? `${Number(r.revenus_annuels).toLocaleString('fr-FR')} €` : '—'}</td>
-                <td className="whitespace-nowrap px-3 py-2.5">{r.epargne != null ? `${Number(r.epargne).toLocaleString('fr-FR')} €` : '—'}</td>
                 <td className="px-3 py-2.5">
                   <select value={r.statut} onChange={(e) => changerStatut(r.id, e.target.value)} className="w-full rounded-lg border-0 px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS[r.statut]?.color, colorScheme: 'light' }}>
                     {STATUT_KEYS.map((s) => <option key={s} value={s} style={{ color: '#1e293b', background: '#fff' }}>{STATUTS[s].label}</option>)}
@@ -124,12 +133,14 @@ export default function DefiscListe() {
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5">
                   <Link href={`/defisc/${r.id}`} className="mr-3 text-[12px] font-medium underline" style={{ color: 'var(--accent)' }}>Modifier</Link>
+                  <Link href={`/defisc/${r.id}/details`} className="mr-3 text-[12px] font-medium underline" style={{ color: 'var(--ink)' }}>Détails</Link>
                   {role === 'admin' && <button onClick={() => supprimer(r)} className="text-[12px] font-medium underline" style={{ color: 'var(--danger)' }}>Supprimer</button>}
                 </td>
               </tr>
-            ))}
-            {!loading && !filtrees.length && <tr><td colSpan={10} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Aucune fiche.</td></tr>}
-            {loading && <tr><td colSpan={10} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Chargement…</td></tr>}
+              )
+            })}
+            {!loading && !filtrees.length && <tr><td colSpan={9} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Aucune fiche.</td></tr>}
+            {loading && <tr><td colSpan={9} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Chargement…</td></tr>}
           </tbody>
         </table>
       </div>
