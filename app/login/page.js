@@ -1,16 +1,18 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 
 export default function Login() {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const MSG_BLOQUE = "Ce compte a été bloqué. Contactez l'administrateur."
+  useEffect(() => { if (new URLSearchParams(window.location.search).get('bloque')) setErr(MSG_BLOQUE) }, [])
   const submit = async (e) => {
     e.preventDefault(); setBusy(true); setErr('')
     const f = Object.fromEntries(new FormData(e.target))
     const { error } = await supabase.auth.signInWithPassword(f)
-    if (error) { setBusy(false); return setErr('Email ou mot de passe incorrect.') }
+    if (error) { setBusy(false); return setErr(/ban/i.test(error.message) ? MSG_BLOQUE : 'Email ou mot de passe incorrect.') }
     // Redirection en rechargement complet : garantit que le cookie de session
     // est bien pris en compte avant que le middleware ne vérifie la page /leads.
     window.location.href = '/choix'
