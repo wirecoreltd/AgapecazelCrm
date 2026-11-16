@@ -16,9 +16,37 @@ const decaler = (n) => { const d = new Date(); d.setDate(d.getDate() + n); retur
 // RDV à venir dans moins de 24 h ou aujourd'hui (et pas déjà traité) -> alerte rouge
 const ACTIFS = ['a_confirmer', 'confirme', 'reporte']
 const urgence = (r) => (ACTIFS.includes(r.statut) && r.date_rdv === decaler(1) ? 'demain' : ACTIFS.includes(r.statut) && r.date_rdv === decaler(0) ? 'aujourdhui' : null)
-const COLONNES = ['Date création', 'Civilité', 'Nom', 'Prénom', 'Type RDV', 'Nature', 'Date RDV', 'Heure RDV', 'Lieu RDV', 'Mobile', 'Fixe', 'E-mail', 'Commentaire', 'Vérif']
+const COLONNES = ['Date création', 'Civilité', 'Nom', 'Prénom', 'Type RDV', 'Nature', 'Date RDV', 'Heure RDV', 'Lieu RDV', 'Mobile', 'Fixe', 'E-mail', 'Vérif']
 const EXPORT_PERIODES = [['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['semaine', 'Cette semaine (depuis lundi)'], ['perso', 'Plage personnalisée']]
 const PERIODES = [['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['semaine', 'Cette semaine']]
+
+const Meta = ({ label, children }) => (
+  <div className="min-w-0">
+    <dt className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{label}</dt>
+    <dd className="mt-0.5 break-words text-[13px] font-medium">{children ?? '—'}</dd>
+  </div>
+)
+
+// Actions de ligne en emoji : ✏️ modifier · 👁️ détails · 🗑️ supprimer (admin)
+function Actions({ r, role, onDelete }) {
+  return (
+    <div className="flex items-center gap-1">
+      {!estVerrouillee(r.statut, role) && <Link href={`/defisc/${r.id}`} className="ico" title="Modifier" aria-label="Modifier">✏️</Link>}
+      <Link href={`/defisc/${r.id}/details`} className="ico" title="Détails" aria-label="Détails">👁️</Link>
+      {role === 'admin' && <button type="button" onClick={() => onDelete(r)} className="ico" title="Supprimer" aria-label="Supprimer">🗑️</button>}
+    </div>
+  )
+}
+
+function StatutCell({ r, role, onChange }) {
+  return role === 'admin' ? (
+    <select value={r.statut} onChange={(e) => onChange(r.id, e.target.value)} className="w-full rounded-lg border-0 px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS[r.statut]?.color, colorScheme: 'light' }}>
+      {STATUT_KEYS.map((k) => <option key={k} value={k} style={{ color: '#1e293b', background: '#fff' }}>{STATUTS[k].label}</option>)}
+    </select>
+  ) : (
+    <span className="inline-block rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS[r.statut]?.color ?? '#666' }}>{STATUTS[r.statut]?.label ?? r.statut}</span>
+  )
+}
 
 export default function DefiscListe() {
   const [rows, setRows] = useState([])
@@ -116,41 +144,41 @@ export default function DefiscListe() {
   }
 
   return (
-    <AppShell wide title="Rendez-vous défiscalisation" subtitle={`${filtrees.length} fiche(s)`}
+    <AppShell wide title="Leads défiscalisation" subtitle={`${filtrees.length} fiche(s)`}
       actions={<><Link href="/defisc/new" className="btn-accent">+ Nouvelle fiche</Link>{role === 'admin' && <Link href="/defisc/import" className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>Importer Excel</Link>}</>}>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher nom, téléphone, e-mail…" className="inp max-w-xs" />
-        <select value={periode} onChange={(e) => setPeriode(e.target.value)} className="inp max-w-[200px]">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher nom, téléphone, e-mail…" className="inp sm:max-w-xs" />
+        <select value={periode} onChange={(e) => setPeriode(e.target.value)} className="inp sm:max-w-[200px]">
           {PERIODES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
         {role === 'admin' && (
-          <select value={conseiller} onChange={(e) => setConseiller(e.target.value)} className="inp max-w-[220px]">
+          <select value={conseiller} onChange={(e) => setConseiller(e.target.value)} className="inp sm:max-w-[220px]">
             <option value="">Tous les conseillers</option>
             {Object.entries(conseillers).map(([id, n]) => <option key={id} value={id}>{n}</option>)}
           </select>
         )}
         {role === 'admin' && (
-          <button type="button" onClick={() => setExportOpen((o) => !o)} className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>
+          <button type="button" onClick={() => setExportOpen((o) => !o)} className="btn-ghost max-sm:w-full" style={{ border: '1px solid var(--border-strong)' }}>
             Exporter vers Google Sheets{sel.size ? ` (${sel.size} cochée${sel.size > 1 ? 's' : ''})` : ''}
           </button>
         )}
       </div>
 
       {role === 'admin' && exportOpen && (
-        <div className="card mb-4 flex flex-wrap items-end gap-3 p-4">
-          <label className="block">
+        <div className="card mb-4 flex flex-wrap items-end gap-3 p-3 sm:p-4">
+          <label className="block max-sm:w-full">
             <span className="field-label">Date de création</span>
-            <select value={expPeriode} onChange={(e) => setExpPeriode(e.target.value)} className="inp max-w-[240px]">
+            <select value={expPeriode} onChange={(e) => setExpPeriode(e.target.value)} className="inp sm:max-w-[240px]">
               {EXPORT_PERIODES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </label>
           {expPeriode === 'perso' && (
             <>
-              <label className="block"><span className="field-label">Du</span><input type="date" value={expDu} onChange={(e) => setExpDu(e.target.value)} className="inp" /></label>
-              <label className="block"><span className="field-label">Au</span><input type="date" value={expAu} onChange={(e) => setExpAu(e.target.value)} className="inp" /></label>
+              <label className="block max-sm:w-full"><span className="field-label">Du</span><input type="date" value={expDu} onChange={(e) => setExpDu(e.target.value)} className="inp" /></label>
+              <label className="block max-sm:w-full"><span className="field-label">Au</span><input type="date" value={expAu} onChange={(e) => setExpAu(e.target.value)} className="inp" /></label>
             </>
           )}
-          <button type="button" onClick={exporter} className="btn-accent">Télécharger ({aExporter.length} fiche{aExporter.length > 1 ? 's' : ''})</button>
+          <button type="button" onClick={exporter} className="btn-accent max-sm:w-full">Télécharger ({aExporter.length} fiche{aExporter.length > 1 ? 's' : ''})</button>
           <p className="basis-full text-[12px]" style={{ color: 'var(--muted)' }}>
             {sel.size ? 'Seules les fiches cochées sont exportées.' : 'Aucune fiche cochée : toutes les fiches affichées sont exportées.'} Fichier Excel à ouvrir dans Google Sheets (Fichier › Importer).
           </p>
@@ -174,7 +202,45 @@ export default function DefiscListe() {
 
       {err && <p className="mb-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{err}</p>}
 
-      <div className="card overflow-x-auto">
+      {/* Mobile : cartes empilées */}
+      <div className="flex flex-col gap-3 sm:hidden">
+        {filtrees.map((r) => {
+          const urg = urgence(r)
+          const nom = [r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || '—'
+          return (
+            <div key={r.id} className="card overflow-hidden p-4" style={{ borderLeft: `4px solid ${urg ? 'var(--danger)' : (STATUTS[r.statut]?.color ?? '#666')}`, background: sel.has(r.id) ? 'var(--accent-soft)' : undefined }}>
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-2.5">
+                  {role === 'admin' && <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={sel.has(r.id)} onChange={() => toggle(r.id)} aria-label="Cocher la fiche" />}
+                  <div className="min-w-0">
+                    <Link href={estVerrouillee(r.statut, role) ? `/defisc/${r.id}/details` : `/defisc/${r.id}`} className="block break-words font-semibold">{nom}</Link>
+                    {urg && <p className="mt-0.5 text-[12px] font-semibold" style={{ color: 'var(--danger)' }}>⚠️ RDV {urg === 'demain' ? 'demain' : "aujourd'hui"}</p>}
+                  </div>
+                </div>
+                <div className="w-32 shrink-0"><StatutCell r={r} role={role} onChange={changerStatut} /></div>
+              </div>
+              <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg p-2.5" style={{ background: 'var(--surface)' }}>
+                <Meta label="Date RDV">{r.date_rdv ? `${fmtDate(r.date_rdv)}${r.heure_rdv ? ' · ' + r.heure_rdv.slice(0, 5) : ''}` : null}</Meta>
+                <Meta label="Création">{fmtDateCreation(r.created_at)}</Meta>
+                <Meta label="Type / nature">{[r.type_rdv, r.nature].filter(Boolean).join(' · ') || null}</Meta>
+                <Meta label="Lieu">{r.lieu_rdv}</Meta>
+                <Meta label="Mobile">{r.mobile && <a href={`tel:${r.mobile}`} className="underline">{r.mobile}</a>}</Meta>
+                <Meta label="Fixe">{r.fixe && <a href={`tel:${r.fixe}`} className="underline">{r.fixe}</a>}</Meta>
+                <Meta label="E-mail">{r.email && <a href={`mailto:${r.email}`} className="underline">{r.email}</a>}</Meta>
+                <Meta label="Vérif">{r.verif}</Meta>
+              </dl>
+              <div className="flex items-center justify-end border-t pt-2" style={{ borderColor: 'var(--border)' }}>
+                <Actions r={r} role={role} onDelete={supprimer} />
+              </div>
+            </div>
+          )
+        })}
+        {loading && <div className="card p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Chargement…</div>}
+        {!loading && !filtrees.length && <div className="card p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucune fiche.</div>}
+      </div>
+
+      {/* Tablette / ordinateur : tableau */}
+      <div className="card hidden overflow-x-auto sm:block">
         <table className="w-full text-left text-[13px]">
           <thead>
             <tr className="border-b text-[11px] uppercase tracking-wide" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>
@@ -187,42 +253,30 @@ export default function DefiscListe() {
           <tbody>
             {filtrees.map((r) => {
               const urg = urgence(r)
+              const marque = urg ? { boxShadow: 'inset 5px 0 0 var(--danger)' } : undefined
               return (
-              <tr key={r.id} className="border-b last:border-0" style={{ borderColor: 'var(--border)', background: sel.has(r.id) ? 'var(--accent-soft, #f3f4f6)' : undefined }}>
-                {role === 'admin' && (
-                  <td className="px-3 py-2.5" style={urg ? { boxShadow: 'inset 5px 0 0 var(--danger)' } : undefined}>
-                    <input type="checkbox" checked={sel.has(r.id)} onChange={() => toggle(r.id)} aria-label="Cocher la fiche" />
-                  </td>
-                )}
-                <td className="whitespace-nowrap px-3 py-2.5" style={role !== 'admin' && urg ? { boxShadow: 'inset 5px 0 0 var(--danger)' } : undefined}>{fmtDateCreation(r.created_at)}</td>
-                <td className="px-3 py-2.5">{r.civilite ?? '—'}</td>
-                <td className="px-3 py-2.5"><Link href={estVerrouillee(r.statut, role) ? `/defisc/${r.id}/details` : `/defisc/${r.id}`} className="font-medium underline-offset-2 hover:underline">{r.nom ?? '—'}</Link></td>
-                <td className="px-3 py-2.5">{r.prenom ?? '—'}</td>
-                <td className="px-3 py-2.5">{r.type_rdv ?? '—'}</td>
-                <td className="px-3 py-2.5">{r.nature ?? '—'}</td>
-                <td className="whitespace-nowrap px-3 py-2.5 font-medium">{fmtDate(r.date_rdv)}</td>
-                <td className="px-3 py-2.5">{r.heure_rdv?.slice(0, 5) ?? '—'}</td>
-                <td className="px-3 py-2.5">{r.lieu_rdv ?? '—'}</td>
-                <td className="whitespace-nowrap px-3 py-2.5">{r.mobile ?? '—'}</td>
-                <td className="whitespace-nowrap px-3 py-2.5">{r.fixe ?? '—'}</td>
-                <td className="px-3 py-2.5">{r.email ?? '—'}</td>
-                <td className="max-w-[220px] truncate px-3 py-2.5" title={r.commentaire ?? ''}>{r.commentaire ? r.commentaire.replace(/\s*\n\s*/g, ' · ') : '—'}</td>
-                <td className="px-3 py-2.5">{r.verif ?? '—'}</td>
-                <td className="px-3 py-2.5">
-                  {role === 'admin' ? (
-                    <select value={r.statut} onChange={(e) => changerStatut(r.id, e.target.value)} className="w-full rounded-lg border-0 px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS[r.statut]?.color, colorScheme: 'light' }}>
-                      {STATUT_KEYS.map((s) => <option key={s} value={s} style={{ color: '#1e293b', background: '#fff' }}>{STATUTS[s].label}</option>)}
-                    </select>
-                  ) : (
-                    <span className="inline-block rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS[r.statut]?.color ?? '#666' }}>{STATUTS[r.statut]?.label ?? r.statut}</span>
+                <tr key={r.id} className="border-b last:border-0" style={{ borderColor: 'var(--border)', background: sel.has(r.id) ? 'var(--accent-soft)' : undefined }}>
+                  {role === 'admin' && (
+                    <td className="px-3 py-2.5" style={marque}>
+                      <input type="checkbox" checked={sel.has(r.id)} onChange={() => toggle(r.id)} aria-label="Cocher la fiche" />
+                    </td>
                   )}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2.5">
-                  {!estVerrouillee(r.statut, role) && <Link href={`/defisc/${r.id}`} className="mr-3 text-[12px] font-medium underline" style={{ color: 'var(--accent)' }}>Modifier</Link>}
-                  <Link href={`/defisc/${r.id}/details`} className="mr-3 text-[12px] font-medium underline" style={{ color: 'var(--ink)' }}>Détails</Link>
-                  {role === 'admin' && <button onClick={() => supprimer(r)} className="text-[12px] font-medium underline" style={{ color: 'var(--danger)' }}>Supprimer</button>}
-                </td>
-              </tr>
+                  <td className="whitespace-nowrap px-3 py-2.5" style={role !== 'admin' ? marque : undefined}>{fmtDateCreation(r.created_at)}</td>
+                  <td className="px-3 py-2.5">{r.civilite ?? '—'}</td>
+                  <td className="px-3 py-2.5"><Link href={estVerrouillee(r.statut, role) ? `/defisc/${r.id}/details` : `/defisc/${r.id}`} className="font-medium underline-offset-2 hover:underline">{r.nom ?? '—'}</Link></td>
+                  <td className="px-3 py-2.5">{r.prenom ?? '—'}</td>
+                  <td className="px-3 py-2.5">{r.type_rdv ?? '—'}</td>
+                  <td className="px-3 py-2.5">{r.nature ?? '—'}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 font-medium">{fmtDate(r.date_rdv)}</td>
+                  <td className="px-3 py-2.5">{r.heure_rdv?.slice(0, 5) ?? '—'}</td>
+                  <td className="px-3 py-2.5">{r.lieu_rdv ?? '—'}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5">{r.mobile ?? '—'}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5">{r.fixe ?? '—'}</td>
+                  <td className="px-3 py-2.5">{r.email ?? '—'}</td>
+                  <td className="px-3 py-2.5">{r.verif ?? '—'}</td>
+                  <td className="min-w-[130px] px-3 py-2.5"><StatutCell r={r} role={role} onChange={changerStatut} /></td>
+                  <td className="whitespace-nowrap px-3 py-1.5"><Actions r={r} role={role} onDelete={supprimer} /></td>
+                </tr>
               )
             })}
             {!loading && !filtrees.length && <tr><td colSpan={COLONNES.length + 3} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Aucune fiche.</td></tr>}
