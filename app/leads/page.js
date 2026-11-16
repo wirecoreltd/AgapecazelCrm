@@ -145,7 +145,7 @@ export default function Leads() {
     setLeads(data ?? [])
 
     if (p?.role === 'admin') {
-      const { data: agents } = await supabase.from('profiles').select('id, nom_complet').in('role', ['agent', 'call_center'])
+      const { data: agents } = await supabase.from('profiles').select('id, nom_complet')
       setAgentsMap(Object.fromEntries((agents ?? []).map((a) => [a.id, a.nom_complet])))
     }
 
@@ -281,6 +281,7 @@ export default function Leads() {
             <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg p-2.5" style={{ background: 'var(--surface)' }}>
               <MetaItem label="Dernier appel" value={derniersAppels[l.id] ?? '—'} />
               {isAdmin && <MetaItem label="Agent" value={agentsMap[l.agent_id] ?? '—'} />}
+              {isAdmin && <MetaItem label="Créé par" value={agentsMap[l.created_by] ?? '—'} />}
               <MetaItem label="Installateur" value={l.installateur || '—'} />
               <MetaItem label="Création" value={fmtDate(l.created_at)} />
               <MetaItem label="Installation" value={fmtDate(l.date_installation)} />
@@ -300,7 +301,7 @@ export default function Leads() {
         <table className="w-full text-left text-sm">
           <thead>
             <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
-              {['Date de création', 'Contact', 'Téléphone', 'Dernier appel', 'Statut', 'Actions', ...(isAdmin ? ['Agent'] : []), 'Installateur', "Date d'installation"].map((h) => (
+              {['Date de création', 'Contact', 'Téléphone', 'Dernier appel', 'Statut', 'Actions', ...(isAdmin ? ['Agent', 'Créé par'] : []), 'Installateur', "Date d'installation"].map((h) => (
                 <th key={h} className="p-3 text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{h}</th>
               ))}
             </tr>
@@ -329,12 +330,13 @@ export default function Leads() {
                   <RowActions l={l} role={role} uploadingId={uploadingId} docCounts={docCounts} onUpload={uploadRapide} onDelete={suppr} />
                 </td>
                 {isAdmin && <td className="p-3" style={{ color: TXT }}>{agentsMap[l.agent_id] ?? '—'}</td>}
+                {isAdmin && <td className="p-3 whitespace-nowrap" style={{ color: TXT }}>{agentsMap[l.created_by] ?? '—'}</td>}
                 <td className="p-3" style={{ color: TXT }}>{l.installateur || '—'}</td>
                 <td className="p-3 whitespace-nowrap" style={{ color: TXT }}>{fmtDate(l.date_installation)}</td>
               </tr>
             ))}
             {!rows.length && (
-              <tr><td colSpan={isAdmin ? 9 : 8} className="p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun lead pour le moment.</td></tr>
+              <tr><td colSpan={isAdmin ? 10 : 8} className="p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun lead pour le moment.</td></tr>
             )}
           </tbody>
         </table>
