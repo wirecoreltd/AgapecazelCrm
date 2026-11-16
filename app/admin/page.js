@@ -158,6 +158,8 @@ export default function Admin() {
   const [busy, setBusy] = useState(false)
   const [resetTarget, setResetTarget] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
+  const [moi, setMoi] = useState(null)
+  const [listMsg, setListMsg] = useState('')
 
   const load = async () => {
     const { data } = await supabase.from('profiles').select('*').order('nom_complet')
@@ -167,9 +169,33 @@ export default function Admin() {
   useEffect(() => { (async () => {
     const { data: { user } } = await supabase.auth.getUser()
     const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    setMoi(user.id)
     setAllowed(p?.role === 'admin')
     if (p?.role === 'admin') load()
   })() }, [])
+
+  const appeler = async (route, body) => {
+    setListMsg('')
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch(`/api/admin/${route}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, accessToken: session.access_token }),
+    })
+    const json = await res.json()
+    if (!res.ok) { setListMsg(`Erreur : ${json.error}`); return false }
+    await load()
+    return true
+  }
+  const basculerBlocage = async (u) => {
+    const bloquer = !u.bloque
+    if (bloquer && !confirm(`Bloquer ${u.nom_complet} ? Il ne pourra plus se connecter.`)) return
+    if (await appeler('block-user', { userId: u.id, blocked: bloquer })) setListMsg(bloquer ? `${u.nom_complet} est bloqué.` : `${u.nom_complet} est débloqué.`)
+  }
+  const supprimerUtilisateur = async (u) => {
+    if (!confirm(`Supprimer définitivement ${u.nom_complet} (${u.email}) ? Cette action est irréversible.`)) return
+    if (await appeler('delete-user', { userId: u.id })) setListMsg(`${u.nom_complet} a été supprimé.`)
+  }
 
   const submit = async (e) => {
     e.preventDefault(); setBusy(true); setMsg('')
@@ -236,10 +262,11 @@ export default function Admin() {
 
         <div className="card p-4 sm:p-6">
           <h2 className="section-heading mb-4">Utilisateurs</h2>
+          {listMsg && <p className="mb-3 rounded-lg px-3 py-2 text-sm" style={{ background: listMsg.startsWith('Erreur') ? 'var(--danger-soft)' : 'var(--accent-soft)', color: listMsg.startsWith('Erreur') ? 'var(--danger)' : 'var(--ink)' }}>{listMsg}</p>}
           <ul className="flex flex-col gap-1.5">
             {users.map((u) => (
-              <li key={u.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg p-2.5 text-sm" style={{ background: 'var(--surface)' }}>
-                <span className="font-medium">{u.nom_complet}</span>
+              <li key={u.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg p-2.5 text-sm" style={{ background: 'var(--surface)', opacity: u.bloque ? 0.7 : 1 }}>
+                <span className="font-medium">{u.nom_complet}{u.bloque && <span className="ml-2 rounded-full px-2 py-0.5 text-[11px] font-medium text-white" style={{ background: 'var(--danger)' }}>Bloqué</span>}</span>
                 <span className="text-[12px]" style={{ color: 'var(--muted)' }}>{u.email}</span>
                 <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="rounded-full px-2 py-0.5 text-[11px] font-medium text-white" style={{ background: u.role === 'admin' ? 'var(--ink)' : 'var(--status-nouveau)' }}>{roleLabel(u.role)}</span>
@@ -260,6 +287,16 @@ export default function Admin() {
                   >
                     Réinitialiser le mot de passe
                   </button>
+                  {u.id !== moi && (
+                    <>
+                      <button type="button" onClick={() => basculerBlocage(u)} className="text-[12px] font-medium underline" style={{ color: u.bloque ? 'var(--success)' : 'var(--danger)' }}>
+                        {u.bloque ? 'Débloquer' : 'Bloquer'}
+                      </button>
+                      <button type="button" onClick={() => supprimerUtilisateur(u)} className="text-[12px] font-medium underline" style={{ color: 'var(--danger)' }}>
+                        Supprimer
+                      </button>
+                    </>
+                  )}
                 </span>
               </li>
             ))}
