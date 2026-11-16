@@ -51,6 +51,8 @@ function StatutCell({ r, role, onChange }) {
 export default function DefiscListe() {
   const [rows, setRows] = useState([])
   const [conseillers, setConseillers] = useState({})
+  const [createurs, setCreateurs] = useState({}) // id -> nom, pour « Créée par »
+  const [createur, setCreateur] = useState('')
   const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
@@ -74,8 +76,9 @@ export default function DefiscListe() {
     const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
     setRole(p?.role ?? null)
     if (p?.role === 'admin') {
-      const { data } = await supabase.from('profiles').select('id, nom_complet').in('role', ['agent', 'call_center'])
-      setConseillers(Object.fromEntries((data ?? []).map((c) => [c.id, c.nom_complet])))
+      const { data } = await supabase.from('profiles').select('id, nom_complet, role')
+      setConseillers(Object.fromEntries((data ?? []).filter((c) => c.role !== 'admin').map((c) => [c.id, c.nom_complet])))
+      setCreateurs(Object.fromEntries((data ?? []).map((c) => [c.id, c.nom_complet])))
     }
     load()
   })() }, [])
@@ -99,6 +102,7 @@ export default function DefiscListe() {
     return rows.filter((r) => {
       if (statuts.length && !statuts.includes(r.statut)) return false
       if (conseiller && r.assigned_to !== conseiller) return false
+      if (createur && r.created_by !== createur) return false
       if (periode === 'aujourdhui' && r.date_rdv !== today) return false
       if (periode === 'semaine' && !(r.date_rdv >= today && r.date_rdv <= iso(fin))) return false
       if (needle) {
@@ -107,7 +111,7 @@ export default function DefiscListe() {
       }
       return true
     })
-  }, [rows, q, statuts, periode, conseiller])
+  }, [rows, q, statuts, periode, conseiller, createur])
 
   const toggle = (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toutCoche = filtrees.length > 0 && filtrees.every((r) => sel.has(r.id))
@@ -130,14 +134,14 @@ export default function DefiscListe() {
     if (!aExporter.length) return setErr('Aucune fiche à exporter pour cette sélection.')
     setErr('')
     const XLSX = await import('xlsx')
-    const entetes = ['DATE CREATION', 'CIVILITE', 'NOM', 'PRENOM', 'TYPE RDV', 'NATURE', 'DATE RDV', 'HEURE RDV', 'LIEU RDV', 'MOBILE', 'FIXE', 'E-MAIL', 'COMMENTAIRE', 'VERIF']
+    const entetes = ['CIVILITE', 'NOM', 'PRENOM', 'TYPE RDV', 'NATURE', 'DATE RDV', 'HEURE RDV', 'LIEU RDV', 'MOBILE', 'FIXE', 'E-MAIL', 'COMMENTAIRE', 'VERIF']
     const lignes = aExporter.map((r) => [
-      fmtDateCreation(r.created_at), r.civilite ?? '', r.nom ?? '', r.prenom ?? '', r.type_rdv ?? '', r.nature ?? '',
+      r.civilite ?? '', r.nom ?? '', r.prenom ?? '', r.type_rdv ?? '', r.nature ?? '',
       r.date_rdv ? fmtDate(r.date_rdv) : '', r.heure_rdv?.slice(0, 5) ?? '', r.lieu_rdv ?? '',
       r.mobile ?? '', r.fixe ?? '', r.email ?? '', r.commentaire ?? '', r.verif ?? '',
     ])
     const ws = XLSX.utils.aoa_to_sheet([entetes, ...lignes]) // tout en texte : le 0 des numéros est conservé
-    ws['!cols'] = [14, 10, 18, 18, 10, 10, 12, 10, 18, 14, 14, 28, 50, 12].map((wch) => ({ wch }))
+    ws['!cols'] = [10, 18, 18, 10, 10, 12, 10, 18, 14, 14, 28, 50, 12].map((wch) => ({ wch }))
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Contacts')
     XLSX.writeFile(wb, `contacts-defisc-${iso(new Date())}.xlsx`)
@@ -155,6 +159,12 @@ export default function DefiscListe() {
           <select value={conseiller} onChange={(e) => setConseiller(e.target.value)} className="inp sm:max-w-[220px]">
             <option value="">Tous les conseillers</option>
             {Object.entries(conseillers).map(([id, n]) => <option key={id} value={id}>{n}</option>)}
+          </select>
+        )}
+        {role === 'admin' && (
+          <select value={createur} onChange={(e) => setCreateur(e.target.value)} className="inp sm:max-w-[220px]" aria-label="Créée par">
+            <option value="">Créée par : tous</option>
+            {Object.entries(createurs).map(([id, n]) => <option key={id} value={id}>{n}</option>)}
           </select>
         )}
         {role === 'admin' && (
@@ -228,6 +238,7 @@ export default function DefiscListe() {
                 <Meta label="Fixe">{r.fixe && <a href={`tel:${r.fixe}`} className="underline">{r.fixe}</a>}</Meta>
                 <Meta label="E-mail">{r.email && <a href={`mailto:${r.email}`} className="underline">{r.email}</a>}</Meta>
                 <Meta label="Vérif">{r.verif}</Meta>
+                {role === 'admin' && <Meta label="Créée par">{createurs[r.created_by] ?? (r.fichier ? 'Import Excel' : null)}</Meta>}
               </dl>
               <div className="flex items-center justify-end border-t pt-2" style={{ borderColor: 'var(--border)' }}>
                 <Actions r={r} role={role} onDelete={supprimer} />
@@ -246,6 +257,7 @@ export default function DefiscListe() {
             <tr className="border-b text-[11px] uppercase tracking-wide" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>
               {role === 'admin' && <th className="px-3 py-2.5"><input type="checkbox" checked={toutCoche} onChange={toggleTout} aria-label="Tout cocher" /></th>}
               {COLONNES.map((h) => <th key={h} className="whitespace-nowrap px-3 py-2.5 font-medium">{h}</th>)}
+              {role === 'admin' && <th className="whitespace-nowrap px-3 py-2.5 font-medium">Créée par</th>}
               <th className="px-3 py-2.5 font-medium">Statut</th>
               <th className="px-3 py-2.5" />
             </tr>
@@ -274,13 +286,14 @@ export default function DefiscListe() {
                   <td className="whitespace-nowrap px-3 py-2.5">{r.fixe ?? '—'}</td>
                   <td className="px-3 py-2.5">{r.email ?? '—'}</td>
                   <td className="px-3 py-2.5">{r.verif ?? '—'}</td>
+                  {role === 'admin' && <td className="whitespace-nowrap px-3 py-2.5 font-medium">{createurs[r.created_by] ?? (r.fichier ? 'Import Excel' : '—')}</td>}
                   <td className="min-w-[130px] px-3 py-2.5"><StatutCell r={r} role={role} onChange={changerStatut} /></td>
                   <td className="whitespace-nowrap px-3 py-1.5"><Actions r={r} role={role} onDelete={supprimer} /></td>
                 </tr>
               )
             })}
-            {!loading && !filtrees.length && <tr><td colSpan={COLONNES.length + 3} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Aucune fiche.</td></tr>}
-            {loading && <tr><td colSpan={COLONNES.length + 3} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Chargement…</td></tr>}
+            {!loading && !filtrees.length && <tr><td colSpan={COLONNES.length + 4} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Aucune fiche.</td></tr>}
+            {loading && <tr><td colSpan={COLONNES.length + 4} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Chargement…</td></tr>}
           </tbody>
         </table>
       </div>
