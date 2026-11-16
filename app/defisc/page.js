@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
-import { STATUTS, STATUT_KEYS } from '@/lib/defisc'
+import { STATUTS, STATUT_KEYS, estVerrouillee } from '@/lib/defisc'
 
 const fmtDate = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR') : '—')
 // Date locale AAAA-MM-JJ (toISOString donnerait la date UTC, décalée la nuit)
@@ -120,7 +120,7 @@ export default function DefiscListe() {
                   {fmtDate(r.date_rdv)}
                 </td>
                 <td className="px-3 py-2.5">{r.heure_rdv?.slice(0, 5) ?? '—'}</td>
-                <td className="px-3 py-2.5"><Link href={`/defisc/${r.id}`} className="font-medium underline-offset-2 hover:underline">{[r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || '—'}</Link></td>
+                <td className="px-3 py-2.5"><Link href={estVerrouillee(r.statut, role) ? `/defisc/${r.id}/details` : `/defisc/${r.id}`} className="font-medium underline-offset-2 hover:underline">{[r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || '—'}</Link></td>
                 <td className="whitespace-nowrap px-3 py-2.5">{r.mobile ?? r.fixe ?? '—'}</td>
                 <td className="px-3 py-2.5">{r.email ?? '—'}</td>
                 <td className="px-3 py-2.5">{r.type_rdv ?? '—'}</td>
@@ -135,7 +135,7 @@ export default function DefiscListe() {
                   )}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5">
-                  <Link href={`/defisc/${r.id}`} className="mr-3 text-[12px] font-medium underline" style={{ color: 'var(--accent)' }}>Modifier</Link>
+                  {!estVerrouillee(r.statut, role) && <Link href={`/defisc/${r.id}`} className="mr-3 text-[12px] font-medium underline" style={{ color: 'var(--accent)' }}>Modifier</Link>}
                   <Link href={`/defisc/${r.id}/details`} className="mr-3 text-[12px] font-medium underline" style={{ color: 'var(--ink)' }}>Détails</Link>
                   {role === 'admin' && <button onClick={() => supprimer(r)} className="text-[12px] font-medium underline" style={{ color: 'var(--danger)' }}>Supprimer</button>}
                 </td>
