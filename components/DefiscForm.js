@@ -22,6 +22,23 @@ function Section({ title, children }) {
   )
 }
 // Seuls les champs affichés dans le formulaire sont envoyés : le profil financier (importé) n'est jamais écrasé
+// Heures par tranche de 15 min, de 07:00 à 21:45
+const CRENEAUX = Array.from({ length: 60 }, (_, i) => { const m = 7 * 60 + i * 15; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` })
+
+function HeureSelect({ value }) {
+  // Si la fiche porte une heure hors tranche (ex. importée à 14:10), on la garde visible pour ne pas la perdre
+  const options = value && !CRENEAUX.includes(value) ? [value, ...CRENEAUX].sort() : CRENEAUX
+  return (
+    <label className="block">
+      <span className="field-label">Heure</span>
+      <select name="heure_rdv" defaultValue={value ?? ''} className="inp">
+        <option value="">Choisir…</option>
+        {options.map((h) => <option key={h} value={h}>{h.replace(':', 'h')}</option>)}
+      </select>
+    </label>
+  )
+}
+
 const TEXTES = ['civilite', 'nom', 'prenom', 'email', 'type_rdv', 'nature', 'lieu_rdv', 'commentaire', 'verif', 'notes']
 
 // fiche : fiche existante (modification) ou undefined (création)
@@ -86,7 +103,7 @@ export default function DefiscForm({ fiche }) {
 
       <Section title="Rendez-vous">
         <Field name="date_rdv" label="Date" type="date" value={v('date_rdv')} />
-        <Field name="heure_rdv" label="Heure" type="time" value={v('heure_rdv')?.slice(0, 5)} />
+        <HeureSelect value={v('heure_rdv')?.slice(0, 5)} />
         <Field name="type_rdv" label="Type de RDV (Visio, présentiel…)" value={v('type_rdv')} />
         <Field name="nature" label="Nature (IMMO…)" value={v('nature')} />
         <Field name="lieu_rdv" label="Lieu" value={v('lieu_rdv')} />
