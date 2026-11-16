@@ -113,7 +113,7 @@ export default function ImportPanel({ onDone, onClose }) {
       {headers.length > 0 && (
         <>
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="rtable w-full text-left text-sm">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   <th className="p-2 text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>Colonne du fichier</th>
@@ -124,10 +124,10 @@ export default function ImportPanel({ onDone, onClose }) {
               <tbody>
                 {headers.map((h, i) => (
                   <tr key={i} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td className="p-2 font-medium" style={{ color: '#000' }}>{h || `Colonne ${i + 1}`}</td>
-                    <td className="max-w-[200px] truncate p-2" style={{ color: '#000' }}>{String(body[0]?.[i] ?? '')}</td>
-                    <td className="p-2">
-                      <select className="inp" value={mapping[i] ?? ''} onChange={(e) => setChamp(i, e.target.value)}>
+                    <td data-label="Colonne" className="p-2 font-medium" style={{ color: '#000' }}>{h || `Colonne ${i + 1}`}</td>
+                    <td data-label="Exemple" className="max-w-[200px] truncate p-2" style={{ color: '#000' }}>{String(body[0]?.[i] ?? '')}</td>
+                    <td data-label="Champ du CRM" className="p-2">
+                      <select className="inp max-sm:max-w-[60%]" value={mapping[i] ?? ''} onChange={(e) => setChamp(i, e.target.value)}>
                         <option value="">— Ignorer —</option>
                         {IMPORT_FIELDS.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
                       </select>
