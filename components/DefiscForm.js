@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { STATUTS, STATUT_KEYS, normFR } from '@/lib/defisc'
+import { STATUTS, STATUT_KEYS, normFR, COMMENTAIRE_MODELE, estModeleVide } from '@/lib/defisc'
 
 function Field({ name, label, value, type = 'text', required, step }) {
   return (
@@ -65,6 +65,7 @@ export default function DefiscForm({ fiche }) {
     const f = Object.fromEntries(new FormData(e.target))
     const data = {}
     for (const k of TEXTES) data[k] = String(f[k] ?? '').trim() || null
+    if (estModeleVide(f.commentaire)) data.commentaire = null // modèle laissé vide : rien à enregistrer
     data.mobile = normFR(f.mobile) || null
     data.fixe = normFR(f.fixe) || null
     data.date_rdv = f.date_rdv || null
@@ -128,8 +129,8 @@ export default function DefiscForm({ fiche }) {
 
       <Section title="Suivi">
         <label className="block sm:col-span-2">
-          <span className="field-label">Commentaire d'origine</span>
-          <textarea name="commentaire" rows={4} defaultValue={v('commentaire') ?? ''} className="inp" />
+          <span className="field-label">Commentaire</span>
+          <textarea name="commentaire" rows={fiche ? 6 : 12} defaultValue={fiche ? (v('commentaire') ?? '') : COMMENTAIRE_MODELE} className="inp" />
         </label>
         <Field name="verif" label="Vérif" value={v('verif')} />
         <span className="hidden sm:block" />
