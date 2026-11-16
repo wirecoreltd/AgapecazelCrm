@@ -105,25 +105,25 @@ export default function ImportDefisc() {
             <button onClick={importer} disabled={busy || !aImporter.length} className="btn-accent ml-auto">Ajouter {aImporter.length} fiche(s) au CRM</button>
           </div>
           <div className="card overflow-x-auto">
-            <table className="w-full text-left text-[12px]">
+            <table className="rtable w-full text-left text-[12px]">
               <thead><tr className="border-b text-[11px] uppercase" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>
                 {['Ligne', 'Client', 'Mobile', 'RDV', 'Type / nature', 'Âge', 'Revenus', 'Impôts', 'Épargne', 'Capacité', 'Intérêt', 'Contrôle'].map((h) => <th key={h} className="px-2.5 py-2 font-medium">{h}</th>)}
               </tr></thead>
               <tbody>
                 {fiches.map((f) => (
                   <tr key={f._ligne} className="border-b last:border-0" style={{ borderColor: 'var(--border)', opacity: f._doublon && !inclureDoublons ? 0.45 : 1 }}>
-                    <td className="px-2.5 py-2">{f._ligne}</td>
-                    <td className="px-2.5 py-2 font-medium">{[f.civilite, f.prenom, f.nom].filter(Boolean).join(' ')}</td>
-                    <td className="px-2.5 py-2">{f.mobile ?? '—'}</td>
-                    <td className="whitespace-nowrap px-2.5 py-2">{fmtDate(f.date_rdv)} {f.heure_rdv ?? ''}</td>
-                    <td className="px-2.5 py-2">{[f.type_rdv, f.nature].filter(Boolean).join(' · ') || '—'}</td>
-                    <td className="px-2.5 py-2">{f.age ?? '—'}</td>
-                    <td className="px-2.5 py-2">{f.revenus_annuels?.toLocaleString('fr-FR') ?? '—'}</td>
-                    <td className="px-2.5 py-2">{f.impots?.toLocaleString('fr-FR') ?? '—'}</td>
-                    <td className="px-2.5 py-2">{f.epargne?.toLocaleString('fr-FR') ?? '—'}</td>
-                    <td className="px-2.5 py-2">{f.capacite_epargne?.toLocaleString('fr-FR') ?? '—'}</td>
-                    <td className="max-w-[220px] truncate px-2.5 py-2" title={f.interet}>{f.interet ?? '—'}</td>
-                    <td className="px-2.5 py-2">
+                    <td data-label="Ligne" className="px-2.5 py-2">{f._ligne}</td>
+                    <td data-label="Client" className="px-2.5 py-2 font-medium">{[f.civilite, f.prenom, f.nom].filter(Boolean).join(' ')}</td>
+                    <td data-label="Mobile" className="px-2.5 py-2">{f.mobile ?? '—'}</td>
+                    <td data-label="RDV" className="whitespace-nowrap px-2.5 py-2">{fmtDate(f.date_rdv)} {f.heure_rdv ?? ''}</td>
+                    <td data-label="Type / nature" className="px-2.5 py-2">{[f.type_rdv, f.nature].filter(Boolean).join(' · ') || '—'}</td>
+                    <td data-label="Âge" className="px-2.5 py-2">{f.age ?? '—'}</td>
+                    <td data-label="Revenus" className="px-2.5 py-2">{f.revenus_annuels?.toLocaleString('fr-FR') ?? '—'}</td>
+                    <td data-label="Impôts" className="px-2.5 py-2">{f.impots?.toLocaleString('fr-FR') ?? '—'}</td>
+                    <td data-label="Épargne" className="px-2.5 py-2">{f.epargne?.toLocaleString('fr-FR') ?? '—'}</td>
+                    <td data-label="Capacité" className="px-2.5 py-2">{f.capacite_epargne?.toLocaleString('fr-FR') ?? '—'}</td>
+                    <td data-label="Intérêt" className="max-w-[220px] truncate px-2.5 py-2" title={f.interet}>{f.interet ?? '—'}</td>
+                    <td data-label="Contrôle" className="px-2.5 py-2">
                       {f._doublon ? <span style={{ color: 'var(--danger)' }}>{f._doublon}</span>
                         : !f.date_rdv ? <span style={{ color: 'var(--danger)' }}>date illisible</span>
                         : f.commentaire && f.age == null && f.revenus_annuels == null ? <span style={{ color: '#a86614' }}>commentaire non découpé</span>
