@@ -124,7 +124,7 @@ export default function Logs() {
       )}
 
       <div className="card overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="rtable w-full text-left text-sm">
           <thead>
             <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
               {['Date', 'Utilisateur', 'Action', 'Type', 'Élément', 'Détails'].map((h) => (
@@ -140,11 +140,11 @@ export default function Logs() {
                   className="cursor-pointer align-top transition-colors hover:bg-black/[0.03]"
                   style={{ borderTop: '1px solid var(--border)' }}
                 >
-                  <td className="whitespace-nowrap p-3 text-[13px]" style={{ color: 'var(--muted)' }}>{fmtDateTime(l.created_at)}</td>
-                  <td className="p-3 font-medium">{l.user_nom ?? 'Système'}</td>
-                  <td className="p-3"><ActionPill action={l.action} /></td>
-                  <td className="p-3" style={{ color: 'var(--muted)' }}>{TABLE_LABELS[l.table_name] ?? l.table_name}</td>
-                  <td className="p-3">
+                  <td data-label="Date" className="whitespace-nowrap p-3 text-[13px]" style={{ color: 'var(--muted)' }}>{fmtDateTime(l.created_at)}</td>
+                  <td data-label="Utilisateur" className="p-3 font-medium">{l.user_nom ?? 'Système'}</td>
+                  <td data-label="Action" className="p-3"><ActionPill action={l.action} /></td>
+                  <td data-label="Type" className="p-3" style={{ color: 'var(--muted)' }}>{TABLE_LABELS[l.table_name] ?? l.table_name}</td>
+                  <td data-label="Élément" className="p-3">
                     {l.lead_id && !(l.table_name === 'leads' && l.action === 'DELETE') ? (
                       <Link href={`/leads/${l.lead_id}`} onClick={(e) => e.stopPropagation()} className="underline-offset-2 hover:underline" style={{ color: 'var(--accent)' }}>
                         {cible(l)}
@@ -153,7 +153,7 @@ export default function Logs() {
                       cible(l)
                     )}
                   </td>
-                  <td className="p-3"><Resume log={l} /></td>
+                  <td data-label="Détails" className="p-3"><Resume log={l} /></td>
                 </tr>
                 {ouvert === l.id && (
                   <tr style={{ background: 'var(--surface)' }}>
