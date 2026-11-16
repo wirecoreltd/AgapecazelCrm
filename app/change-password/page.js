@@ -24,7 +24,7 @@ export default function ChangePassword() {
     if (!res.ok) { setBusy(false); return setErr(json.error || 'Erreur lors du changement.') }
     // Reconnexion avec le nouveau mot de passe pour obtenir une session à jour
     const { error } = await supabase.auth.signInWithPassword({ email: json.email, password })
-    window.location.href = error ? '/login' : '/leads'
+    window.location.href = error ? '/login' : '/choix'
   }
 
   const logout = async () => {

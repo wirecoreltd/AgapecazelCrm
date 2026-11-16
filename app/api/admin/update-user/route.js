@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 // Modifier un utilisateur existant (nom, email, rôle) — réservé à l'admin
 export async function POST(req) {
   try {
-    const { userId, nom_complet, email, role, accessToken } = await req.json()
+    const { userId, nom_complet, email, role, modules, accessToken } = await req.json()
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -20,6 +20,9 @@ export async function POST(req) {
     if (!['admin', 'agent', 'call_center'].includes(role)) {
       return Response.json({ error: 'Rôle invalide.' }, { status: 400 })
     }
+
+    const mods = role === 'admin' ? ['pac', 'defisc'] : (Array.isArray(modules) ? modules : []).filter((m) => ['pac', 'defisc'].includes(m))
+    if (!mods.length) return Response.json({ error: 'Choisissez au moins un CRM.' }, { status: 400 })
 
     const authClient = createClient(url, anonKey)
     const { data: { user }, error: authErr } = await authClient.auth.getUser(accessToken)
@@ -44,7 +47,7 @@ export async function POST(req) {
     }
 
     const { error: profErr } = await admin.from('profiles')
-      .update({ nom_complet: nom_complet.trim(), email: cleanEmail, role })
+      .update({ nom_complet: nom_complet.trim(), email: cleanEmail, role, modules: mods })
       .eq('id', userId)
     if (profErr) return Response.json({ error: profErr.message }, { status: 400 })
 

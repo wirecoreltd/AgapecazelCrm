@@ -2,7 +2,25 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
-import { roleLabel } from '@/lib/roles'
+import { roleLabel, MODULES, MODULE_KEYS, modulesOf } from '@/lib/roles'
+
+// Cases à cocher « CRM autorisés » (l'admin a toujours les deux, quel que soit ce qui est coché)
+function ModulesChecks({ defaults }) {
+  return (
+    <fieldset className="block">
+      <span className="field-label">CRM autorisés</span>
+      <div className="flex flex-wrap gap-4 pt-1">
+        {MODULE_KEYS.map((k) => (
+          <label key={k} className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name={`mod_${k}`} defaultChecked={defaults.includes(k)} />
+            {MODULES[k].label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+const lireModules = (f) => MODULE_KEYS.filter((k) => f[`mod_${k}`])
 
 const CARACTERES_MDP = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
 const genererMotDePasse = () => {
@@ -89,7 +107,7 @@ function EditUserModal({ user, onClose, onSaved }) {
     const res = await fetch('/api/admin/update-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...f, userId: user.id, accessToken: session.access_token }),
+      body: JSON.stringify({ ...f, modules: lireModules(f), userId: user.id, accessToken: session.access_token }),
     })
     const json = await res.json()
     setBusy(false)
@@ -118,6 +136,8 @@ function EditUserModal({ user, onClose, onSaved }) {
               <option value="admin">Admin</option>
             </select>
           </label>
+          <ModulesChecks defaults={modulesOf(user.role, user.modules)} />
+          <p className="text-[12px]" style={{ color: 'var(--muted)' }}>L'admin a toujours accès aux deux CRM.</p>
         </div>
         {msg && (
           <p className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{msg}</p>
@@ -158,7 +178,7 @@ export default function Admin() {
     const res = await fetch('/api/admin/create-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...f, accessToken: session.access_token }),
+      body: JSON.stringify({ ...f, modules: lireModules(f), accessToken: session.access_token }),
     })
     const json = await res.json()
     setBusy(false)
@@ -208,6 +228,7 @@ export default function Admin() {
               <span className="field-label">Mot de passe</span>
               <input name="password" type="password" required minLength={6} className="inp" />
             </label>
+            <div className="sm:col-span-2"><ModulesChecks defaults={['pac']} /></div>
             <button disabled={busy} className="btn-accent sm:col-span-2">Créer l'utilisateur</button>
             {msg && <p className="text-sm sm:col-span-2" style={{ color: 'var(--ink)' }}>{msg}</p>}
           </form>
@@ -222,6 +243,7 @@ export default function Admin() {
                 <span className="text-[12px]" style={{ color: 'var(--muted)' }}>{u.email}</span>
                 <span className="flex items-center gap-2">
                   <span className="rounded-full px-2 py-0.5 text-[11px] font-medium text-white" style={{ background: u.role === 'admin' ? 'var(--ink)' : 'var(--status-nouveau)' }}>{roleLabel(u.role)}</span>
+                  <span className="text-[11px]" style={{ color: 'var(--muted)' }}>{modulesOf(u.role, u.modules).map((k) => MODULES[k].label).join(' + ')}</span>
                   <button
                     type="button"
                     onClick={() => setEditTarget(u)}

@@ -22,19 +22,21 @@ export async function middleware(req) {
   const path = req.nextUrl.pathname
   const onLogin = path.startsWith('/login')
   const onChange = path.startsWith('/change-password')
+  const onChoix = path === '/choix' // écran de choix du CRM : accessible à tout utilisateur connecté
   const isApi = path.startsWith('/api')
   // Drapeau posé côté serveur (app_metadata : non modifiable par l'utilisateur)
   const mustChange = user?.app_metadata?.must_change_password === true
   if (!user && !onLogin) return NextResponse.redirect(new URL('/login', req.url))
   if (user && mustChange && !onChange && !isApi) return NextResponse.redirect(new URL('/change-password', req.url))
-  if (user && !mustChange && onChange) return NextResponse.redirect(new URL('/leads', req.url))
-  if (user && onLogin) return NextResponse.redirect(new URL(mustChange ? '/change-password' : '/leads', req.url))
+  if (user && !mustChange && onChange) return NextResponse.redirect(new URL('/choix', req.url))
+  if (user && onLogin) return NextResponse.redirect(new URL(mustChange ? '/change-password' : '/choix', req.url))
   // Contrôle d'accès par rôle (pages + API appels)
-  if (user && !onLogin && !onChange && (!isApi || path.startsWith('/api/appels'))) {
-    const { data: prof } = await sb.from('profiles').select('role').eq('id', user.id).single()
-    if (!canAccess(prof?.role, path)) {
+  if (user && !onLogin && !onChange && !onChoix && (!isApi || path.startsWith('/api/appels'))) {
+    // select('*') : fonctionne même si la colonne modules n'existe pas encore (avant la migration SQL)
+    const { data: prof } = await sb.from('profiles').select('*').eq('id', user.id).single()
+    if (!canAccess(prof?.role, path, prof?.modules)) {
       if (isApi) return Response.json({ error: 'Accès refusé.' }, { status: 403 })
-      return NextResponse.redirect(new URL('/leads', req.url))
+      return NextResponse.redirect(new URL('/choix', req.url))
     }
   }
   return res

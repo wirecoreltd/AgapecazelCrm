@@ -1,0 +1,145 @@
+'use client'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
+import { STATUTS, STATUT_KEYS, normFR } from '@/lib/defisc'
+
+function Field({ name, label, value, type = 'text', required, step }) {
+  return (
+    <label className="block">
+      <span className="field-label">{label}{required && ' *'}</span>
+      <input name={name} type={type} step={step} required={!!required} defaultValue={value ?? ''} className="inp" />
+    </label>
+  )
+}
+function Section({ title, children }) {
+  return (
+    <div>
+      <h2 className="section-heading mb-3">{title}</h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
+    </div>
+  )
+}
+const NOMBRES = ['age', 'enfants', 'revenus_annuels', 'impots', 'credit_loyer', 'endettement', 'epargne', 'capacite_epargne']
+const TEXTES = ['civilite', 'nom', 'prenom', 'email', 'type_rdv', 'nature', 'lieu_rdv', 'situation_familiale', 'profession', 'interet', 'commentaire', 'verif', 'notes']
+
+// fiche : fiche existante (modification) ou undefined (création)
+export default function DefiscForm({ fiche }) {
+  const router = useRouter()
+  const [msg, setMsg] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [role, setRole] = useState(null)
+  const [conseillers, setConseillers] = useState([])
+
+  useEffect(() => { (async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    setRole(p?.role ?? null)
+    if (p?.role === 'admin') {
+      const { data } = await supabase.from('profiles').select('id, nom_complet').in('role', ['agent', 'call_center']).order('nom_complet')
+      setConseillers(data ?? [])
+    }
+  })() }, [])
+
+  const submit = async (e) => {
+    e.preventDefault(); setBusy(true); setMsg('')
+    const f = Object.fromEntries(new FormData(e.target))
+    const data = {}
+    for (const k of TEXTES) data[k] = String(f[k] ?? '').trim() || null
+    for (const k of NOMBRES) { const v = String(f[k] ?? '').replace(/\s/g, '').replace(',', '.'); data[k] = v === '' || isNaN(Number(v)) ? null : Number(v) }
+    data.mobile = normFR(f.mobile) || null
+    data.fixe = normFR(f.fixe) || null
+    data.date_rdv = f.date_rdv || null
+    data.heure_rdv = f.heure_rdv || null
+    data.statut = f.statut || 'a_confirmer'
+    if (role === 'admin') data.assigned_to = f.assigned_to || null
+
+    let error
+    if (fiche) ({ error } = await supabase.from('defisc_leads').update(data).eq('id', fiche.id))
+    else {
+      const { data: { user } } = await supabase.auth.getUser()
+      ;({ error } = await supabase.from('defisc_leads').insert({ ...data, created_by: user.id }))
+    }
+    setBusy(false)
+    if (error) return setMsg(`Erreur : ${error.message}`)
+    router.push('/defisc')
+  }
+
+  const v = (k) => fiche?.[k]
+  return (
+    <form onSubmit={submit} className="space-y-8">
+      <Section title="Contact">
+        <label className="block">
+          <span className="field-label">Civilité</span>
+          <select name="civilite" defaultValue={v('civilite') ?? ''} className="inp">
+            <option value="">Choisir…</option><option>Monsieur</option><option>Madame</option>
+          </select>
+        </label>
+        <span className="hidden sm:block" />
+        <Field name="nom" label="Nom" value={v('nom')} required />
+        <Field name="prenom" label="Prénom" value={v('prenom')} />
+        <Field name="mobile" label="Mobile" value={v('mobile')} />
+        <Field name="fixe" label="Fixe" value={v('fixe')} />
+        <Field name="email" label="E-mail" type="email" value={v('email')} />
+      </Section>
+
+      <Section title="Rendez-vous">
+        <Field name="date_rdv" label="Date" type="date" value={v('date_rdv')} />
+        <Field name="heure_rdv" label="Heure" type="time" value={v('heure_rdv')?.slice(0, 5)} />
+        <Field name="type_rdv" label="Type de RDV (Visio, présentiel…)" value={v('type_rdv')} />
+        <Field name="nature" label="Nature (IMMO…)" value={v('nature')} />
+        <Field name="lieu_rdv" label="Lieu" value={v('lieu_rdv')} />
+        <label className="block">
+          <span className="field-label">Statut</span>
+          <select name="statut" defaultValue={v('statut') ?? 'a_confirmer'} className="inp">
+            {STATUT_KEYS.map((k) => <option key={k} value={k}>{STATUTS[k].label}</option>)}
+          </select>
+        </label>
+        {role === 'admin' && (
+          <label className="block">
+            <span className="field-label">Conseiller</span>
+            <select name="assigned_to" defaultValue={v('assigned_to') ?? ''} className="inp" key={`c-${conseillers.length}`}>
+              <option value="">Non assigné</option>
+              {conseillers.map((c) => <option key={c.id} value={c.id}>{c.nom_complet}</option>)}
+            </select>
+          </label>
+        )}
+      </Section>
+
+      <Section title="Profil financier">
+        <Field name="age" label="Âge" type="number" value={v('age')} />
+        <Field name="situation_familiale" label="Situation familiale" value={v('situation_familiale')} />
+        <Field name="enfants" label="Enfants" type="number" value={v('enfants')} />
+        <Field name="profession" label="Profession" value={v('profession')} />
+        <Field name="revenus_annuels" label="Revenus annuels nets (€)" type="number" step="any" value={v('revenus_annuels')} />
+        <Field name="impots" label="Impôts sur le revenu (€)" type="number" step="any" value={v('impots')} />
+        <Field name="credit_loyer" label="Crédit / loyer / RP (€)" type="number" step="any" value={v('credit_loyer')} />
+        <Field name="endettement" label="Endettement (%)" type="number" step="any" value={v('endettement')} />
+        <Field name="epargne" label="Épargne (€)" type="number" step="any" value={v('epargne')} />
+        <Field name="capacite_epargne" label="Capacité d'épargne (€)" type="number" step="any" value={v('capacite_epargne')} />
+        <div className="sm:col-span-2"><Field name="interet" label="Intérêt exprimé" value={v('interet')} /></div>
+      </Section>
+
+      <Section title="Suivi">
+        <label className="block sm:col-span-2">
+          <span className="field-label">Commentaire d'origine</span>
+          <textarea name="commentaire" rows={4} defaultValue={v('commentaire') ?? ''} className="inp" />
+        </label>
+        <Field name="verif" label="Vérif" value={v('verif')} />
+        <span className="hidden sm:block" />
+        <label className="block sm:col-span-2">
+          <span className="field-label">Notes</span>
+          <textarea name="notes" rows={3} defaultValue={v('notes') ?? ''} className="inp" />
+        </label>
+      </Section>
+
+      {msg && <p className="rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{msg}</p>}
+      <div className="flex justify-end gap-2">
+        <Link href="/defisc" className="btn-ghost">Annuler</Link>
+        <button disabled={busy} className="btn-accent">{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+      </div>
+    </form>
+  )
+}

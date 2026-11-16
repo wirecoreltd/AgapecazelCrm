@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { canAccess } from '@/lib/roles'
+import { canAccess, modulesOf, moduleOf, MODULES } from '@/lib/roles'
 
 function Logo() {
   // Le logo doit être dans /public/logo.png
@@ -38,6 +38,16 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
   const [role, setRole] = useState(null)
   const [nom, setNom] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [modules, setModules] = useState([])
+  const [switchOpen, setSwitchOpen] = useState(false)
+  // CRM courant : celui de la page ; sur les pages communes (admin, historique) on garde le dernier utilisé
+  const [dernier, setDernier] = useState('pac')
+  const courant = moduleOf(pathname) ?? dernier
+  useEffect(() => {
+    const m = moduleOf(pathname)
+    if (m) { try { localStorage.setItem('dernier_module', m) } catch {} ; setDernier(m); return }
+    try { const d = localStorage.getItem('dernier_module'); if (d && MODULES[d]) setDernier(d) } catch {}
+  }, [pathname])
 
   useEffect(() => {
     ;(async () => {
@@ -46,11 +56,12 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
       if (!user) return
       const { data: p, error: profileErr } = await supabase
         .from('profiles')
-        .select('role, nom_complet')
+        .select('*')
         .eq('id', user.id)
         .single()
       if (profileErr) { console.error('AppShell profiles fetch error:', profileErr); return }
       setRole(p?.role ?? null)
+      setModules(modulesOf(p?.role, p?.modules))
       setNom(p?.nom_complet || user.email || '')
     })()
   }, [])
@@ -61,33 +72,68 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
     router.refresh()
   }
 
+  // Liens du menu : ceux du CRM courant + pages communes, filtrés par rôle ET par module
+  const items = (courant === 'defisc'
+    ? [['/defisc', 'Rendez-vous'], ['/defisc/import', 'Import']]
+    : [['/leads', 'Leads'], ['/appels', 'Appels'], ['/stats', 'Statistiques']]
+  ).concat([['/admin', 'Espace admin'], ['/logs', 'Historique']])
+    .filter(([href]) => canAccess(role, href, modules))
+  // Un seul lien actif : le plus précis (/defisc/import l'emporte sur /defisc)
+  const actif = items.map(([h]) => h).filter((h) => pathname === h || pathname.startsWith(h + '/')).sort((a, b) => b.length - a.length)[0]
+
   const navLink = (href, label) => (
     <Link
+      key={href}
       href={href}
       onClick={() => setMenuOpen(false)}
       className="rounded-lg px-3 py-2 text-sm font-medium transition-colors"
       style={{
-        color: pathname.startsWith(href) ? 'white' : 'rgba(255,255,255,0.72)',
-        background: pathname.startsWith(href) ? 'rgba(255,255,255,0.12)' : 'transparent',
+        color: actif === href ? 'white' : 'rgba(255,255,255,0.72)',
+        background: actif === href ? 'rgba(255,255,255,0.12)' : 'transparent',
       }}
     >
       {label}
     </Link>
   )
 
+  // Nom du CRM en cours ; devient un sélecteur si l'utilisateur a accès aux deux
+  const peutChanger = modules.length > 1
+  const moduleLabel = (
+    <div className="relative hidden sm:block">
+      <button
+        type="button"
+        disabled={!peutChanger}
+        onClick={() => setSwitchOpen((o) => !o)}
+        className="flex items-center gap-1.5 rounded-lg border border-white/20 px-2.5 py-1 text-[12px] font-semibold"
+        style={{ color: 'var(--accent)' }}
+      >
+        {MODULES[courant]?.label}
+        {peutChanger && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+      </button>
+      {switchOpen && peutChanger && (
+        <div className="absolute left-0 top-full z-40 mt-1 min-w-[180px] rounded-lg p-1 shadow-lg" style={{ background: 'var(--ink-hover)', border: '1px solid rgba(255,255,255,0.15)' }}>
+          {modules.map((k) => (
+            <Link key={k} href={MODULES[k].home} onClick={() => setSwitchOpen(false)}
+              className="block rounded-md px-3 py-2 text-sm text-white/90 hover:bg-white/10"
+              style={k === courant ? { background: 'rgba(255,255,255,0.12)' } : undefined}>
+              {MODULES[k].label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 shadow-sm" style={{ background: 'var(--ink)', borderBottom: '3px solid var(--accent)' }}>
         <div className={`mx-auto flex items-center gap-2 px-4 py-3 sm:px-6 ${wide ? 'max-w-[1800px]' : 'max-w-6xl'}`}>
-          <Link href="/leads" className="mr-2">
+          <Link href={MODULES[courant]?.home ?? '/choix'} className="mr-2">
             <Logo />
           </Link>
+          {moduleLabel}
           <nav className="ml-2 hidden items-center gap-1 sm:flex">
-            {canAccess(role, '/leads') && navLink('/leads', 'Leads')}
-            {canAccess(role, '/appels') && navLink('/appels', 'Appels')}
-            {canAccess(role, '/stats') && navLink('/stats', 'Statistiques')}
-            {canAccess(role, '/admin') && navLink('/admin', 'Espace admin')}
-            {canAccess(role, '/logs') && navLink('/logs', 'Historique')}
+            {items.map(([href, label]) => navLink(href, label))}
           </nav>
 
           {/* Desktop : Déconnexion + nom (or) en dessous */}
@@ -123,15 +169,13 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
         </div>
         {menuOpen && (
           <div className="flex flex-col gap-1 border-t border-white/10 px-4 py-3 sm:hidden">
-            {canAccess(role, '/leads') && <Link href="/leads" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Leads</Link>}
-            {canAccess(role, '/appels') && <Link href="/appels" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Appels</Link>}
-            {canAccess(role, '/stats') && <Link href="/stats" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Statistiques</Link>}
-            {canAccess(role, '/admin') && (
-              <Link href="/admin" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Espace admin</Link>
-            )}
-            {canAccess(role, '/logs') && (
-              <Link href="/logs" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">Historique</Link>
-            )}
+            <p className="px-3 pt-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--accent)' }}>{MODULES[courant]?.label}</p>
+            {items.map(([href, label]) => (
+              <Link key={href} href={href} onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 hover:bg-white/10">{label}</Link>
+            ))}
+            {peutChanger && modules.filter((k) => k !== courant).map((k) => (
+              <Link key={k} href={MODULES[k].home} onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-white/10" style={{ color: 'var(--accent)' }}>Passer à : {MODULES[k].label}</Link>
+            ))}
             <button onClick={logout} className="rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/70 hover:bg-white/10">Déconnexion</button>
             {nom && (
               <p className="truncate px-3 text-xs font-semibold" style={{ color: 'var(--accent)' }} title={nom}>{nom}</p>

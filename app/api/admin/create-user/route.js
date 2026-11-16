@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req) {
   try {
-    const { email, password, nom_complet, role, accessToken } = await req.json()
+    const { email, password, nom_complet, role, modules, accessToken } = await req.json()
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -23,6 +23,9 @@ export async function POST(req) {
     if (caller?.role !== 'admin') return Response.json({ error: "Réservé à l'admin." }, { status: 403 })
 
     if (!['admin', 'agent', 'call_center'].includes(role)) return Response.json({ error: 'Rôle invalide.' }, { status: 400 })
+    // Modules : pac par défaut ; l'admin a toujours tout
+    const mods = role === 'admin' ? ['pac', 'defisc'] : (Array.isArray(modules) ? modules : ['pac']).filter((m) => ['pac', 'defisc'].includes(m))
+    if (!mods.length) return Response.json({ error: 'Choisissez au moins un CRM.' }, { status: 400 })
 
     const { data: created, error } = await admin.auth.admin.createUser({
       email, password, email_confirm: true,
@@ -31,7 +34,7 @@ export async function POST(req) {
     if (error) return Response.json({ error: error.message }, { status: 400 })
 
     const { error: profErr } = await admin.from('profiles').insert({
-      id: created.user.id, nom_complet, role, email,
+      id: created.user.id, nom_complet, role, email, modules: mods,
     })
     if (profErr) return Response.json({ error: profErr.message }, { status: 400 })
 

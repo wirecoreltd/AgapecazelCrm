@@ -13,7 +13,7 @@ export default function Login() {
     if (error) { setBusy(false); return setErr('Email ou mot de passe incorrect.') }
     // Redirection en rechargement complet : garantit que le cookie de session
     // est bien pris en compte avant que le middleware ne vérifie la page /leads.
-    window.location.href = '/leads'
+    window.location.href = '/choix'
   }
   return (
     <div className="flex min-h-screen items-center justify-center px-4" style={{ background: 'var(--ink)' }}>
