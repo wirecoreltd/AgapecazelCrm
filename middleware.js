@@ -30,11 +30,17 @@ export async function middleware(req) {
   if (user && mustChange && !onChange && !isApi) return NextResponse.redirect(new URL('/change-password', req.url))
   if (user && !mustChange && onChange) return NextResponse.redirect(new URL('/choix', req.url))
   if (user && onLogin) return NextResponse.redirect(new URL(mustChange ? '/change-password' : '/choix', req.url))
-  // Contrôle d'accès par rôle (pages + API appels)
-  if (user && !onLogin && !onChange && !onChoix && (!isApi || path.startsWith('/api/appels'))) {
-    // select('*') : fonctionne même si la colonne modules n'existe pas encore (avant la migration SQL)
+  // Profil : blocage (vérifié à chaque page) + contrôle d'accès par rôle (pages + API appels)
+  if (user && !onLogin && (!isApi || path.startsWith('/api/appels'))) {
+    // select('*') : fonctionne même si les colonnes modules / bloque n'existent pas encore (avant la migration SQL)
     const { data: prof } = await sb.from('profiles').select('*').eq('id', user.id).single()
-    if (!canAccess(prof?.role, path, prof?.modules)) {
+    if (prof?.bloque) {
+      await sb.auth.signOut() // efface les cookies de session
+      const out = isApi ? NextResponse.json({ error: 'Compte bloqué.' }, { status: 403 }) : NextResponse.redirect(new URL('/login?bloque=1', req.url))
+      res.cookies.getAll().forEach((c) => out.cookies.set(c))
+      return out
+    }
+    if (!onChange && !onChoix && !canAccess(prof?.role, path, prof?.modules)) {
       if (isApi) return Response.json({ error: 'Accès refusé.' }, { status: 403 })
       return NextResponse.redirect(new URL('/choix', req.url))
     }
