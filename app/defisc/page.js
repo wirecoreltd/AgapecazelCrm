@@ -27,12 +27,12 @@ const Meta = ({ label, children }) => (
   </div>
 )
 
-// Actions de ligne en emoji : ✏️ modifier · 👁️ détails · 🗑️ supprimer (admin)
+// Actions de ligne en emoji : ✏️ modifier · 🔍 détails · 🗑️ supprimer (admin)
 function Actions({ r, role, onDelete }) {
   return (
     <div className="flex items-center gap-1">
       {!estVerrouillee(r.statut, role) && <Link href={`/defisc/${r.id}`} className="ico" title="Modifier" aria-label="Modifier">✏️</Link>}
-      <Link href={`/defisc/${r.id}/details`} className="ico" title="Détails" aria-label="Détails">👁️</Link>
+      <Link href={`/defisc/${r.id}/details`} className="ico" title="Détails" aria-label="Détails">📋</Link>
       {role === 'admin' && <button type="button" onClick={() => onDelete(r)} className="ico" title="Supprimer" aria-label="Supprimer">🗑️</button>}
     </div>
   )
