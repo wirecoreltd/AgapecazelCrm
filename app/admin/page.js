@@ -151,6 +151,53 @@ function EditUserModal({ user, onClose, onSaved }) {
   )
 }
 
+const initiales = (nom) => (nom ?? '?').split(/\s+/).filter(Boolean).slice(0, 2).map((m) => m[0]).join('').toUpperCase() || '?'
+
+function Pastille({ children, fond, couleur = '#fff' }) {
+  return <span className="inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium" style={{ background: fond, color: couleur }}>{children}</span>
+}
+
+function BoutonAction({ icone, label, onClick, danger }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-black/5"
+      style={{ borderColor: danger ? 'var(--danger)' : 'var(--border-strong)', color: danger ? 'var(--danger)' : 'var(--ink)' }}
+    >
+      <span aria-hidden>{icone}</span>{label}
+    </button>
+  )
+}
+
+function LigneUtilisateur({ u, moi, onEdit, onReset, onBlock, onDelete }) {
+  const modulesTxt = modulesOf(u.role, u.modules).map((k) => MODULES[k].label)
+  return (
+    <li className="card overflow-hidden p-4" style={{ borderLeft: `4px solid ${u.bloque ? 'var(--danger)' : 'var(--border)'}`, opacity: u.bloque ? 0.8 : 1 }}>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold" style={{ background: 'var(--accent-soft)', color: 'var(--ink)' }}>{initiales(u.nom_complet)}</span>
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{u.nom_complet}{u.id === moi && <span className="ml-2 text-[12px] font-normal" style={{ color: 'var(--muted)' }}>(vous)</span>}</p>
+            <p className="truncate text-[13px]" style={{ color: 'var(--muted)' }}>{u.email}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Pastille fond={u.role === 'admin' ? 'var(--ink)' : 'var(--status-nouveau)'}>{roleLabel(u.role)}</Pastille>
+          {modulesTxt.map((m) => <Pastille key={m} fond="var(--accent-soft)" couleur="var(--ink)">{m}</Pastille>)}
+          <Pastille fond={u.bloque ? 'var(--danger)' : 'var(--success)'}>{u.bloque ? 'Bloqué' : 'Actif'}</Pastille>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2 border-t pt-3" style={{ borderColor: 'var(--border)' }}>
+        <BoutonAction icone="✏️" label="Modifier" onClick={() => onEdit(u)} />
+        <BoutonAction icone="🔑" label="Mot de passe" onClick={() => onReset(u)} />
+        {u.id !== moi && <BoutonAction icone={u.bloque ? '✅' : '🚫'} label={u.bloque ? 'Débloquer' : 'Bloquer'} onClick={() => onBlock(u)} danger={!u.bloque} />}
+        {u.id !== moi && <BoutonAction icone="🗑️" label="Supprimer" onClick={() => onDelete(u)} danger />}
+      </div>
+    </li>
+  )
+}
+
 export default function Admin() {
   const [allowed, setAllowed] = useState(null)
   const [users, setUsers] = useState([])
@@ -160,6 +207,8 @@ export default function Admin() {
   const [editTarget, setEditTarget] = useState(null)
   const [moi, setMoi] = useState(null)
   const [listMsg, setListMsg] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+  const [recherche, setRecherche] = useState('')
 
   const load = async () => {
     const { data } = await supabase.from('profiles').select('*').order('nom_complet')
@@ -211,6 +260,7 @@ export default function Admin() {
     if (!res.ok) return setMsg(`Erreur : ${json.error}`)
     setMsg('Utilisateur créé.')
     e.target.reset(); load()
+    setShowCreate(false); setListMsg('Utilisateur créé.')
   }
 
   if (allowed === null) {
@@ -228,11 +278,19 @@ export default function Admin() {
     )
   }
 
+  const q = recherche.trim().toLowerCase()
+  const visibles = users.filter((u) => !q || `${u.nom_complet ?? ''} ${u.email ?? ''} ${roleLabel(u.role)}`.toLowerCase().includes(q))
+
   return (
-    <AppShell backHref="/leads" title="Espace admin">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="card p-4 sm:p-6">
-          <h2 className="section-heading mb-4">Créer un utilisateur</h2>
+    <AppShell
+      backHref="/leads"
+      title="Espace admin"
+      subtitle="Gestion des utilisateurs"
+      actions={<button type="button" onClick={() => setShowCreate((o) => !o)} className="btn-accent">{showCreate ? 'Fermer' : '+ Nouvel utilisateur'}</button>}
+    >
+      {showCreate && (
+        <div className="card mb-6 p-4 sm:p-6">
+          <h2 className="section-heading mb-4">Nouvel utilisateur</h2>
           <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="field-label">Nom complet</span>
@@ -251,59 +309,31 @@ export default function Admin() {
               <input name="email" type="email" required className="inp" />
             </label>
             <label className="block">
-              <span className="field-label">Mot de passe</span>
+              <span className="field-label">Mot de passe temporaire</span>
               <input name="password" type="password" required minLength={6} className="inp" />
             </label>
             <div className="sm:col-span-2"><ModulesChecks defaults={['pac']} /></div>
-            <button disabled={busy} className="btn-accent sm:col-span-2">Créer l'utilisateur</button>
-            {msg && <p className="text-sm sm:col-span-2" style={{ color: 'var(--ink)' }}>{msg}</p>}
+            <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+              <button disabled={busy} className="btn-accent">Créer l'utilisateur</button>
+              {msg && <p className="text-sm" style={{ color: msg.startsWith('Erreur') ? 'var(--danger)' : 'var(--ink)' }}>{msg}</p>}
+            </div>
           </form>
         </div>
+      )}
 
-        <div className="card p-4 sm:p-6">
-          <h2 className="section-heading mb-4">Utilisateurs</h2>
-          {listMsg && <p className="mb-3 rounded-lg px-3 py-2 text-sm" style={{ background: listMsg.startsWith('Erreur') ? 'var(--danger-soft)' : 'var(--accent-soft)', color: listMsg.startsWith('Erreur') ? 'var(--danger)' : 'var(--ink)' }}>{listMsg}</p>}
-          <ul className="flex flex-col gap-1.5">
-            {users.map((u) => (
-              <li key={u.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg p-2.5 text-sm" style={{ background: 'var(--surface)', opacity: u.bloque ? 0.7 : 1 }}>
-                <span className="font-medium">{u.nom_complet}{u.bloque && <span className="ml-2 rounded-full px-2 py-0.5 text-[11px] font-medium text-white" style={{ background: 'var(--danger)' }}>Bloqué</span>}</span>
-                <span className="text-[12px]" style={{ color: 'var(--muted)' }}>{u.email}</span>
-                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="rounded-full px-2 py-0.5 text-[11px] font-medium text-white" style={{ background: u.role === 'admin' ? 'var(--ink)' : 'var(--status-nouveau)' }}>{roleLabel(u.role)}</span>
-                  <span className="text-[11px]" style={{ color: 'var(--muted)' }}>{modulesOf(u.role, u.modules).map((k) => MODULES[k].label).join(' + ')}</span>
-                  <button
-                    type="button"
-                    onClick={() => setEditTarget(u)}
-                    className="text-[12px] font-medium underline"
-                    style={{ color: 'var(--accent)' }}
-                  >
-                    Modifier
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setResetTarget(u)}
-                    className="text-[12px] font-medium underline"
-                    style={{ color: 'var(--accent)' }}
-                  >
-                    Réinitialiser le mot de passe
-                  </button>
-                  {u.id !== moi && (
-                    <>
-                      <button type="button" onClick={() => basculerBlocage(u)} className="text-[12px] font-medium underline" style={{ color: u.bloque ? 'var(--success)' : 'var(--danger)' }}>
-                        {u.bloque ? 'Débloquer' : 'Bloquer'}
-                      </button>
-                      <button type="button" onClick={() => supprimerUtilisateur(u)} className="text-[12px] font-medium underline" style={{ color: 'var(--danger)' }}>
-                        Supprimer
-                      </button>
-                    </>
-                  )}
-                </span>
-              </li>
-            ))}
-            {!users.length && <li className="text-sm" style={{ color: 'var(--muted)' }}>Aucun utilisateur.</li>}
-          </ul>
-        </div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <h2 className="section-heading mr-auto">Utilisateurs ({visibles.length})</h2>
+        <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un nom, un email, un rôle…" className="inp w-full sm:max-w-xs" />
       </div>
+
+      {listMsg && <p className="mb-4 rounded-lg px-3 py-2 text-sm" style={{ background: listMsg.startsWith('Erreur') ? 'var(--danger-soft)' : 'var(--accent-soft)', color: listMsg.startsWith('Erreur') ? 'var(--danger)' : 'var(--ink)' }}>{listMsg}</p>}
+
+      <ul className="flex flex-col gap-3">
+        {visibles.map((u) => (
+          <LigneUtilisateur key={u.id} u={u} moi={moi} onEdit={setEditTarget} onReset={setResetTarget} onBlock={basculerBlocage} onDelete={supprimerUtilisateur} />
+        ))}
+        {!visibles.length && <li className="card p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun utilisateur.</li>}
+      </ul>
 
       {editTarget && <EditUserModal user={editTarget} onClose={() => setEditTarget(null)} onSaved={() => { setEditTarget(null); load() }} />}
       {resetTarget && <ResetPasswordModal user={resetTarget} onClose={() => setResetTarget(null)} />}
