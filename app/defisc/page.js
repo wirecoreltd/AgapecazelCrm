@@ -134,14 +134,14 @@ export default function DefiscListe() {
     if (!aExporter.length) return setErr('Aucune fiche à exporter pour cette sélection.')
     setErr('')
     const XLSX = await import('xlsx')
-    const entetes = ['CIVILITE', 'NOM', 'PRENOM', 'TYPE RDV', 'NATURE', 'DATE RDV', 'HEURE RDV', 'LIEU RDV', 'MOBILE', 'FIXE', 'E-MAIL', 'COMMENTAIRE', 'VERIF']
+    const entetes = ['CIVILITE', 'NOM', 'PRENOM', 'TYPE RDV', 'NATURE', 'DATE RDV', 'HEURE RDV', 'LIEU RDV', 'MOBILE', 'FIXE', 'E-MAIL', 'COMMENTAIRE', 'NOTES', 'VERIF']
     const lignes = aExporter.map((r) => [
       r.civilite ?? '', r.nom ?? '', r.prenom ?? '', r.type_rdv ?? '', r.nature ?? '',
       r.date_rdv ? fmtDate(r.date_rdv) : '', r.heure_rdv?.slice(0, 5) ?? '', r.lieu_rdv ?? '',
-      r.mobile ?? '', r.fixe ?? '', r.email ?? '', r.commentaire ?? '', r.verif ?? '',
+      r.mobile ?? '', r.fixe ?? '', r.email ?? '', r.commentaire ?? '', r.notes ?? '', r.verif ?? '',
     ])
     const ws = XLSX.utils.aoa_to_sheet([entetes, ...lignes]) // tout en texte : le 0 des numéros est conservé
-    ws['!cols'] = [10, 18, 18, 10, 10, 12, 10, 18, 14, 14, 28, 50, 12].map((wch) => ({ wch }))
+    ws['!cols'] = [10, 18, 18, 10, 10, 12, 10, 18, 14, 14, 28, 50, 40, 12].map((wch) => ({ wch }))
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Contacts')
     XLSX.writeFile(wb, `contacts-defisc-${iso(new Date())}.xlsx`)
