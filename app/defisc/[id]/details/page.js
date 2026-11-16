@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
 import { STATUTS } from '@/lib/defisc'
 
-const eur = (v) => (v == null ? null : `${Number(v).toLocaleString('fr-FR')} €`)
 const date = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : null)
 
 function Bloc({ titre, lignes }) {
@@ -46,11 +45,6 @@ export default function DetailsFiche() {
           <Bloc titre="Rendez-vous" lignes={[
             ['Date', date(f.date_rdv)], ['Heure', f.heure_rdv?.slice(0, 5)], ['Type', f.type_rdv],
             ['Nature', f.nature], ['Lieu', f.lieu_rdv], ['Vérif', f.verif]]} />
-          <Bloc titre="Profil financier" lignes={[
-            ['Âge', f.age], ['Situation familiale', f.situation_familiale], ['Enfants', f.enfants], ['Profession', f.profession],
-            ['Revenus annuels nets', eur(f.revenus_annuels)], ['Impôts sur le revenu', eur(f.impots)],
-            ['Crédit / loyer / RP', eur(f.credit_loyer)], ['Endettement', f.endettement != null ? `${f.endettement} %` : null],
-            ['Épargne', eur(f.epargne)], ['Capacité d\'épargne', eur(f.capacite_epargne)], ['Intérêt exprimé', f.interet]]} />
           <Bloc titre="Suivi" lignes={[['Commentaire d\'origine', f.commentaire], ['Notes', f.notes]]} />
         </div>
       )}
