@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
 import { roleLabel, MODULES, MODULE_KEYS, modulesOf } from '@/lib/roles'
+import { messageBienvenue, numeroWhatsApp, lienWhatsApp } from '@/lib/whatsapp'
 
 // Cases à cocher « CRM autorisés » (l'admin a toujours les deux, quel que soit ce qui est coché)
 function ModulesChecks({ defaults }) {
@@ -259,6 +260,36 @@ const FILTRES = [
   { key: 'call_center', label: 'Call Center' },
 ]
 
+// Affiché juste après la création : message de bienvenue à envoyer par WhatsApp ou à copier
+function MessageBienvenue({ infos, onClose }) {
+  const [message, setMessage] = useState('')
+  const [copie, setCopie] = useState(false)
+  useEffect(() => { setMessage(messageBienvenue(infos, `${window.location.origin}/login`)) }, [infos])
+  const numero = numeroWhatsApp(infos.telephone)
+
+  const copier = async () => {
+    try { await navigator.clipboard.writeText(message); setCopie(true); setTimeout(() => setCopie(false), 2000) } catch {}
+  }
+
+  return (
+    <div className="card mb-6 p-4 sm:p-6" style={{ borderColor: 'var(--accent)' }}>
+      <h2 className="section-heading mb-1">Utilisateur créé : envoyez-lui ses accès</h2>
+      <p className="mb-3 text-[13px]" style={{ color: 'var(--muted)' }}>
+        {infos.nom_complet}{numero ? ` · +${numero}` : ' · aucun numéro renseigné : copiez le message et collez-le dans WhatsApp.'}
+        {' '}Le mot de passe n'est plus visible une fois ce bloc fermé.
+      </p>
+      <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={8} className="inp" aria-label="Message WhatsApp" />
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        {numero && (
+          <a href={lienWhatsApp(numero, message)} target="_blank" rel="noopener noreferrer" className="btn-accent text-center">Ouvrir dans WhatsApp</a>
+        )}
+        <button type="button" onClick={copier} className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>{copie ? 'Message copié !' : 'Copier le message'}</button>
+        <button type="button" onClick={onClose} className="btn-ghost sm:ml-auto">Fermer</button>
+      </div>
+    </div>
+  )
+}
+
 export default function Admin() {
   const [allowed, setAllowed] = useState(null)
   const [users, setUsers] = useState([])
@@ -269,6 +300,8 @@ export default function Admin() {
   const [moi, setMoi] = useState(null)
   const [listMsg, setListMsg] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [creeInfos, setCreeInfos] = useState(null)
+  const [mdpCree, setMdpCree] = useState('')
   const [recherche, setRecherche] = useState('')
   const [filtre, setFiltre] = useState('tous')
 
@@ -321,8 +354,9 @@ export default function Admin() {
     setBusy(false)
     if (!res.ok) return setMsg(`Erreur : ${json.error}`)
     setMsg('Utilisateur créé.')
-    e.target.reset(); load()
-    setShowCreate(false); setListMsg('Utilisateur créé.')
+    setCreeInfos({ nom_complet: f.nom_complet, email: f.email, password: f.password, telephone: f.telephone })
+    e.target.reset(); setMdpCree(''); load()
+    setShowCreate(false); setListMsg('')
   }
 
   if (allowed === null) {
@@ -356,6 +390,8 @@ export default function Admin() {
       subtitle="Gestion des utilisateurs"
       actions={<button type="button" onClick={() => setShowCreate((o) => !o)} className="btn-accent">{showCreate ? 'Fermer' : '+ Nouvel utilisateur'}</button>}
     >
+      {creeInfos && <MessageBienvenue infos={creeInfos} onClose={() => setCreeInfos(null)} />}
+
       {showCreate && (
         <div className="card mb-6 p-4 sm:p-6">
           <h2 className="section-heading mb-4">Nouvel utilisateur</h2>
@@ -378,7 +414,14 @@ export default function Admin() {
             </label>
             <label className="block">
               <span className="field-label">Mot de passe temporaire</span>
-              <input name="password" type="password" required minLength={6} className="inp" />
+              <div className="flex gap-2">
+                <input name="password" type="text" required minLength={6} value={mdpCree} onChange={(e) => setMdpCree(e.target.value)} className="inp" />
+                <button type="button" onClick={() => setMdpCree(genererMotDePasse())} className="btn-ghost shrink-0" style={{ border: '1px solid var(--border-strong)' }}>Générer</button>
+              </div>
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="field-label">Téléphone WhatsApp (pour envoyer ses accès)</span>
+              <input name="telephone" type="tel" placeholder="06 12 34 56 78" className="inp" />
             </label>
             <div className="sm:col-span-2"><ModulesChecks defaults={['pac']} /></div>
             <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
