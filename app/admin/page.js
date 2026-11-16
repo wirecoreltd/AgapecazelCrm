@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
 import { roleLabel, MODULES, MODULE_KEYS, modulesOf } from '@/lib/roles'
@@ -157,46 +157,107 @@ function Pastille({ children, fond, couleur = '#fff' }) {
   return <span className="inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium" style={{ background: fond, color: couleur }}>{children}</span>
 }
 
-function BoutonAction({ icone, label, onClick, danger }) {
+function Stat({ label, valeur, couleur }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-black/5"
-      style={{ borderColor: danger ? 'var(--danger)' : 'var(--border-strong)', color: danger ? 'var(--danger)' : 'var(--ink)' }}
-    >
-      <span aria-hidden>{icone}</span>{label}
-    </button>
+    <div className="card px-4 py-3">
+      <p className="text-[13px]" style={{ color: 'var(--muted)' }}>{label}</p>
+      <p className="mt-0.5 text-2xl font-semibold" style={{ color: couleur ?? 'var(--ink)' }}>{valeur}</p>
+    </div>
   )
 }
 
-function LigneUtilisateur({ u, moi, onEdit, onReset, onBlock, onDelete }) {
+// Menu « ⋯ » : les actions n'apparaissent qu'au clic
+function MenuActions({ u, moi, onEdit, onReset, onBlock, onDelete }) {
+  const [ouvert, setOuvert] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!ouvert) return
+    const dehors = (e) => { if (ref.current && !ref.current.contains(e.target)) setOuvert(false) }
+    const echap = (e) => { if (e.key === 'Escape') setOuvert(false) }
+    document.addEventListener('mousedown', dehors)
+    document.addEventListener('keydown', echap)
+    return () => { document.removeEventListener('mousedown', dehors); document.removeEventListener('keydown', echap) }
+  }, [ouvert])
+
+  const choisir = (fn) => () => { setOuvert(false); fn(u) }
+  const item = 'flex min-h-[40px] w-full items-center rounded-lg px-3 text-left text-sm transition-colors hover:bg-black/5'
+  const estMoi = u.id === moi
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOuvert((o) => !o)}
+        aria-label={`Actions pour ${u.nom_complet}`}
+        aria-haspopup="menu"
+        aria-expanded={ouvert}
+        className="flex h-10 w-10 items-center justify-center rounded-lg border text-lg transition-colors hover:bg-black/5"
+        style={{ borderColor: 'var(--border-strong)', color: 'var(--ink)', background: ouvert ? 'rgba(0,0,0,.05)' : 'transparent' }}
+      >
+        <span aria-hidden>⋯</span>
+      </button>
+      {ouvert && (
+        <div
+          role="menu"
+          className="absolute right-0 top-11 z-20 flex min-w-[200px] flex-col rounded-xl border p-1.5 shadow-lg"
+          style={{ background: '#fff', borderColor: 'var(--border)' }}
+        >
+          <button role="menuitem" type="button" className={item} onClick={choisir(onEdit)}>Modifier</button>
+          <button role="menuitem" type="button" className={item} onClick={choisir(onReset)}>Mot de passe</button>
+          {!estMoi && <button role="menuitem" type="button" className={item} onClick={choisir(onBlock)}>{u.bloque ? 'Débloquer' : 'Bloquer'}</button>}
+          {!estMoi && <hr className="my-1" style={{ borderColor: 'var(--border)' }} />}
+          {!estMoi && <button role="menuitem" type="button" className={item} style={{ color: 'var(--danger)' }} onClick={choisir(onDelete)}>Supprimer</button>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LigneUtilisateur({ u, moi, ...actions }) {
   const modulesTxt = modulesOf(u.role, u.modules).map((k) => MODULES[k].label)
   return (
-    <li className="card overflow-hidden p-4" style={{ borderLeft: `4px solid ${u.bloque ? 'var(--danger)' : 'var(--border)'}`, opacity: u.bloque ? 0.8 : 1 }}>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold" style={{ background: 'var(--accent-soft)', color: 'var(--ink)' }}>{initiales(u.nom_complet)}</span>
-          <div className="min-w-0">
-            <p className="truncate font-semibold">{u.nom_complet}{u.id === moi && <span className="ml-2 text-[12px] font-normal" style={{ color: 'var(--muted)' }}>(vous)</span>}</p>
-            <p className="truncate text-[13px]" style={{ color: 'var(--muted)' }}>{u.email}</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Pastille fond={u.role === 'admin' ? 'var(--ink)' : 'var(--status-nouveau)'}>{roleLabel(u.role)}</Pastille>
-          {modulesTxt.map((m) => <Pastille key={m} fond="var(--accent-soft)" couleur="var(--ink)">{m}</Pastille>)}
-          <Pastille fond={u.bloque ? 'var(--danger)' : 'var(--success)'}>{u.bloque ? 'Bloqué' : 'Actif'}</Pastille>
+    <li
+      className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 border-t px-4 py-3 md:grid-cols-[2.4fr_1fr_1.4fr_.8fr_auto]"
+      style={{ borderColor: 'var(--border)', background: u.bloque ? 'var(--danger-soft)' : 'transparent' }}
+    >
+      <div className="flex min-w-0 items-center gap-3" style={{ opacity: u.bloque ? 0.7 : 1 }}>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold" style={{ background: 'var(--accent-soft)', color: 'var(--ink)' }}>{initiales(u.nom_complet)}</span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{u.nom_complet}{u.id === moi && <span className="ml-2 text-[12px] font-normal" style={{ color: 'var(--muted)' }}>(vous)</span>}</p>
+          <p className="truncate text-[13px]" style={{ color: 'var(--muted)' }}>{u.email}</p>
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 border-t pt-3" style={{ borderColor: 'var(--border)' }}>
-        <BoutonAction icone="✏️" label="Modifier" onClick={() => onEdit(u)} />
-        <BoutonAction icone="🔑" label="Mot de passe" onClick={() => onReset(u)} />
-        {u.id !== moi && <BoutonAction icone={u.bloque ? '✅' : '🚫'} label={u.bloque ? 'Débloquer' : 'Bloquer'} onClick={() => onBlock(u)} danger={!u.bloque} />}
-        {u.id !== moi && <BoutonAction icone="🗑️" label="Supprimer" onClick={() => onDelete(u)} danger />}
+
+      <div className="col-start-1 row-start-2 flex flex-wrap items-center gap-1.5 md:col-start-auto md:row-start-auto">
+        <Pastille fond={u.role === 'admin' ? 'var(--ink)' : 'var(--status-nouveau)'}>{roleLabel(u.role)}</Pastille>
+        <span className="md:hidden" />
+        {modulesTxt.map((m) => <span key={m} className="md:hidden"><Pastille fond="var(--accent-soft)" couleur="var(--ink)">{m}</Pastille></span>)}
+      </div>
+
+      <div className="hidden flex-wrap gap-1.5 md:flex">
+        {modulesTxt.map((m) => <Pastille key={m} fond="var(--accent-soft)" couleur="var(--ink)">{m}</Pastille>)}
+      </div>
+
+      <p className="hidden items-center gap-1.5 text-[13px] font-medium md:flex" style={{ color: u.bloque ? 'var(--danger)' : 'var(--success)' }}>
+        <span className="inline-block h-2 w-2 rounded-full" style={{ background: 'currentColor' }} />
+        {u.bloque ? 'Bloqué' : 'Actif'}
+      </p>
+
+      <div className="col-start-2 row-span-2 row-start-1 flex items-center gap-3 md:col-start-auto md:row-span-1 md:row-start-auto">
+        <span className="text-[12px] font-medium md:hidden" style={{ color: u.bloque ? 'var(--danger)' : 'var(--success)' }}>● {u.bloque ? 'Bloqué' : 'Actif'}</span>
+        <MenuActions u={u} moi={moi} {...actions} />
       </div>
     </li>
   )
 }
+
+const FILTRES = [
+  { key: 'tous', label: 'Tous' },
+  { key: 'admin', label: 'Admin' },
+  { key: 'agent', label: 'Agent' },
+  { key: 'call_center', label: 'Call Center' },
+]
 
 export default function Admin() {
   const [allowed, setAllowed] = useState(null)
@@ -209,6 +270,7 @@ export default function Admin() {
   const [listMsg, setListMsg] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [recherche, setRecherche] = useState('')
+  const [filtre, setFiltre] = useState('tous')
 
   const load = async () => {
     const { data } = await supabase.from('profiles').select('*').order('nom_complet')
@@ -279,7 +341,13 @@ export default function Admin() {
   }
 
   const q = recherche.trim().toLowerCase()
-  const visibles = users.filter((u) => !q || `${u.nom_complet ?? ''} ${u.email ?? ''} ${roleLabel(u.role)}`.toLowerCase().includes(q))
+  const visibles = users.filter((u) =>
+    (filtre === 'tous' || u.role === filtre) &&
+    (!q || `${u.nom_complet ?? ''} ${u.email ?? ''} ${roleLabel(u.role)}`.toLowerCase().includes(q))
+  )
+  const nbActifs = users.filter((u) => !u.bloque).length
+  const nbBloques = users.length - nbActifs
+  const nbAdmins = users.filter((u) => u.role === 'admin').length
 
   return (
     <AppShell
@@ -321,19 +389,46 @@ export default function Admin() {
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h2 className="section-heading mr-auto">Utilisateurs ({visibles.length})</h2>
-        <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un nom, un email, un rôle…" className="inp w-full sm:max-w-xs" />
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat label="Utilisateurs" valeur={users.length} />
+        <Stat label="Actifs" valeur={nbActifs} couleur="var(--success)" />
+        <Stat label="Bloqués" valeur={nbBloques} couleur={nbBloques ? 'var(--danger)' : undefined} />
+        <Stat label="Admins" valeur={nbAdmins} />
+      </div>
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un nom, un email, un rôle…" aria-label="Rechercher" className="inp w-full sm:max-w-xs" />
+        <div className="flex flex-wrap gap-2">
+          {FILTRES.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFiltre(f.key)}
+              aria-pressed={filtre === f.key}
+              className="min-h-[40px] rounded-lg border px-3.5 text-[13px] font-medium transition-colors"
+              style={filtre === f.key
+                ? { background: 'var(--ink)', color: '#fff', borderColor: 'var(--ink)' }
+                : { background: 'transparent', color: 'var(--ink)', borderColor: 'var(--border-strong)' }}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {listMsg && <p className="mb-4 rounded-lg px-3 py-2 text-sm" style={{ background: listMsg.startsWith('Erreur') ? 'var(--danger-soft)' : 'var(--accent-soft)', color: listMsg.startsWith('Erreur') ? 'var(--danger)' : 'var(--ink)' }}>{listMsg}</p>}
 
-      <ul className="flex flex-col gap-3">
-        {visibles.map((u) => (
-          <LigneUtilisateur key={u.id} u={u} moi={moi} onEdit={setEditTarget} onReset={setResetTarget} onBlock={basculerBlocage} onDelete={supprimerUtilisateur} />
-        ))}
-        {!visibles.length && <li className="card p-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Aucun utilisateur.</li>}
-      </ul>
+      <div className="card">
+        <div className="hidden grid-cols-[2.4fr_1fr_1.4fr_.8fr_auto] gap-x-4 rounded-t-[inherit] px-4 py-2.5 text-[12px] font-medium md:grid" style={{ color: 'var(--muted)' }}>
+          <span>Utilisateur ({visibles.length})</span><span>Rôle</span><span>CRM</span><span>Statut</span><span className="w-10" />
+        </div>
+        <ul>
+          {visibles.map((u) => (
+            <LigneUtilisateur key={u.id} u={u} moi={moi} onEdit={setEditTarget} onReset={setResetTarget} onBlock={basculerBlocage} onDelete={supprimerUtilisateur} />
+          ))}
+          {!visibles.length && <li className="border-t p-8 text-center text-sm" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>Aucun utilisateur.</li>}
+        </ul>
+      </div>
 
       {editTarget && <EditUserModal user={editTarget} onClose={() => setEditTarget(null)} onSaved={() => { setEditTarget(null); load() }} />}
       {resetTarget && <ResetPasswordModal user={resetTarget} onClose={() => setResetTarget(null)} />}
