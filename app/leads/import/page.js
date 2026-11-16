@@ -112,7 +112,7 @@ export default function ListeImport() {
       {err && <p className="mb-4 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{err}</p>}
 
       <div className="card overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="rtable w-full text-left text-sm">
           <thead>
             <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
               {HEADS.map((h) => <th key={h} className="p-3 text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{h}</th>)}
@@ -123,17 +123,17 @@ export default function ListeImport() {
               const dernier = [r.mobile, r.telephone_1, r.telephone_2].map(cle9).map((k) => derniers[k]).find(Boolean)
               return (
                 <tr key={r.id} className="transition-colors hover:bg-black/[0.03]" style={{ borderTop: '1px solid var(--border)', background: i % 2 ? 'rgba(0,0,0,0.012)' : 'transparent' }}>
-                  <td className="whitespace-nowrap p-3" style={{ color: TXT, borderLeft: '3px solid var(--status-perdu)' }}>{fmtDate(r.created_at)}</td>
-                  <td className="p-3 font-medium" style={{ color: TXT }}>
+                  <td data-label="Date de création" className="whitespace-nowrap p-3" style={{ color: TXT, borderLeft: '3px solid var(--status-perdu)' }}>{fmtDate(r.created_at)}</td>
+                  <td data-label="Contact" className="p-3 font-medium" style={{ color: TXT }}>
                     {[r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || '—'}
                   </td>
-                  <td className="font-mono-data whitespace-nowrap p-3 text-[13px]" style={{ color: TXT }}>{r.mobile || r.telephone_1 || '—'}</td>
-                  <td className="p-3" style={{ color: TXT }}>{dernier ?? '—'}</td>
-                  <td className="p-3">
+                  <td data-label="Téléphone" className="font-mono-data whitespace-nowrap p-3 text-[13px]" style={{ color: TXT }}>{r.mobile || r.telephone_1 || '—'}</td>
+                  <td data-label="Dernier appel" className="p-3" style={{ color: TXT }}>{dernier ?? '—'}</td>
+                  <td data-label="Statut" className="p-3">
                     <span className="inline-block rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: 'var(--status-perdu)' }}>En attente</span>
                   </td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-3 whitespace-nowrap">
+                  <td data-label="Actions" className="p-3">
+                    <div className="flex flex-wrap items-center justify-end gap-3 sm:justify-start">
                       <Link href={`/leads/import/${r.id}`} title="Voir" className="opacity-75 transition-opacity hover:opacity-100" style={{ color: 'var(--ink)' }}>
                         <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M1 10s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.4" /></svg>
                       </Link>
@@ -148,8 +148,8 @@ export default function ListeImport() {
                       )}
                     </div>
                   </td>
-                  <td className="p-3" style={{ color: TXT }}>—</td>
-                  <td className="p-3" style={{ color: TXT }}>—</td>
+                  <td data-label="Installateur" className="p-3" style={{ color: TXT }}>—</td>
+                  <td data-label="Date d'installation" className="p-3" style={{ color: TXT }}>—</td>
                 </tr>
               )
             })}
