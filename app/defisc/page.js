@@ -50,7 +50,6 @@ function StatutCell({ r, role, onChange }) {
 
 export default function DefiscListe() {
   const [rows, setRows] = useState([])
-  const [conseillers, setConseillers] = useState({})
   const [createurs, setCreateurs] = useState({}) // id -> nom, pour « Créée par »
   const [createur, setCreateur] = useState('')
   const [role, setRole] = useState(null)
@@ -58,9 +57,10 @@ export default function DefiscListe() {
   const [q, setQ] = useState('')
   const [statuts, setStatuts] = useState([])
   const [periode, setPeriode] = useState('tous')
-  const [conseiller, setConseiller] = useState('')
   const [err, setErr] = useState('')
   const [sel, setSel] = useState(new Set()) // fiches cochées
+  const [ouverts, setOuverts] = useState(new Set()) // cartes mobiles dépliées
+  const deplier = (id) => setOuverts((o) => { const n = new Set(o); n.has(id) ? n.delete(id) : n.add(id); return n })
   const [exportOpen, setExportOpen] = useState(false)
   const [expPeriode, setExpPeriode] = useState('tous')
   const [expDu, setExpDu] = useState('')
@@ -77,7 +77,6 @@ export default function DefiscListe() {
     setRole(p?.role ?? null)
     if (p?.role === 'admin') {
       const { data } = await supabase.from('profiles').select('id, nom_complet, role')
-      setConseillers(Object.fromEntries((data ?? []).filter((c) => c.role !== 'admin').map((c) => [c.id, c.nom_complet])))
       setCreateurs(Object.fromEntries((data ?? []).map((c) => [c.id, c.nom_complet])))
     }
     load()
@@ -101,7 +100,6 @@ export default function DefiscListe() {
     const needle = q.trim().toLowerCase().replace(/\s/g, '')
     return rows.filter((r) => {
       if (statuts.length && !statuts.includes(r.statut)) return false
-      if (conseiller && r.assigned_to !== conseiller) return false
       if (createur && r.created_by !== createur) return false
       if (periode === 'aujourdhui' && r.date_rdv !== today) return false
       if (periode === 'semaine' && !(r.date_rdv >= today && r.date_rdv <= iso(fin))) return false
@@ -111,7 +109,7 @@ export default function DefiscListe() {
       }
       return true
     })
-  }, [rows, q, statuts, periode, conseiller, createur])
+  }, [rows, q, statuts, periode, createur])
 
   const toggle = (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toutCoche = filtrees.length > 0 && filtrees.every((r) => sel.has(r.id))
@@ -155,12 +153,6 @@ export default function DefiscListe() {
         <select value={periode} onChange={(e) => setPeriode(e.target.value)} className="inp sm:max-w-[200px]">
           {PERIODES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        {role === 'admin' && (
-          <select value={conseiller} onChange={(e) => setConseiller(e.target.value)} className="inp sm:max-w-[220px]">
-            <option value="">Tous les conseillers</option>
-            {Object.entries(conseillers).map(([id, n]) => <option key={id} value={id}>{n}</option>)}
-          </select>
-        )}
         {role === 'admin' && (
           <select value={createur} onChange={(e) => setCreateur(e.target.value)} className="inp sm:max-w-[220px]" aria-label="Créée par">
             <option value="">Créée par : tous</option>
@@ -212,37 +204,48 @@ export default function DefiscListe() {
 
       {err && <p className="mb-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{err}</p>}
 
-      {/* Mobile : cartes empilées */}
+      {/* Mobile : cartes repliables (résumé -> détails au clic) */}
       <div className="flex flex-col gap-3 sm:hidden">
         {filtrees.map((r) => {
           const urg = urgence(r)
+          const ouvert = ouverts.has(r.id)
           const nom = [r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || '—'
+          const rdv = r.date_rdv ? `${fmtDate(r.date_rdv)}${r.heure_rdv ? ' · ' + r.heure_rdv.slice(0, 5) : ''}` : '—'
+          const par = role === 'admin' ? (createurs[r.created_by] ?? (r.fichier ? 'Import Excel' : '—')) : null
           return (
-            <div key={r.id} className="card overflow-hidden p-4" style={{ borderLeft: `4px solid ${urg ? 'var(--danger)' : (STATUTS[r.statut]?.color ?? '#666')}`, background: sel.has(r.id) ? 'var(--accent-soft)' : undefined }}>
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-2.5">
-                  {role === 'admin' && <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={sel.has(r.id)} onChange={() => toggle(r.id)} aria-label="Cocher la fiche" />}
-                  <div className="min-w-0">
-                    <Link href={estVerrouillee(r.statut, role) ? `/defisc/${r.id}/details` : `/defisc/${r.id}`} className="block break-words font-semibold">{nom}</Link>
-                    {urg && <p className="mt-0.5 text-[12px] font-semibold" style={{ color: 'var(--danger)' }}>⚠️ RDV {urg === 'demain' ? 'demain' : "aujourd'hui"}</p>}
+            <div key={r.id} className="card overflow-hidden" style={{ borderLeft: `4px solid ${urg ? 'var(--danger)' : (STATUTS[r.statut]?.color ?? '#666')}`, background: sel.has(r.id) ? 'var(--accent-soft)' : undefined }}>
+              <div className="flex items-start gap-3 p-4">
+                {role === 'admin' && <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={sel.has(r.id)} onChange={() => toggle(r.id)} aria-label="Cocher la fiche" />}
+                <button type="button" onClick={() => deplier(r.id)} aria-expanded={ouvert} className="min-w-0 flex-1 text-left">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="break-words font-semibold">{nom}</span>
+                    <span aria-hidden className="mt-0.5 shrink-0 text-[12px]" style={{ color: 'var(--muted)' }}>{ouvert ? '▲' : '▼'}</span>
+                  </div>
+                  {urg && <p className="mt-0.5 text-[12px] font-semibold" style={{ color: 'var(--danger)' }}>⚠️ RDV {urg === 'demain' ? 'demain' : "aujourd'hui"}</p>}
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+                    <Meta label="Création">{fmtDateCreation(r.created_at)}</Meta>
+                    <Meta label="RDV">{rdv}</Meta>
+                    {par !== null && <Meta label="Créée par">{par}</Meta>}
+                  </dl>
+                </button>
+              </div>
+              {ouvert && (
+                <div className="border-t px-4 pb-3 pt-3" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+                  <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-2">
+                    <Meta label="Type RDV">{r.type_rdv}</Meta>
+                    <Meta label="Nature">{r.nature}</Meta>
+                    <Meta label="Lieu">{r.lieu_rdv}</Meta>
+                    <Meta label="Vérif">{r.verif}</Meta>
+                    <Meta label="Mobile">{r.mobile && <a href={`tel:${r.mobile}`} className="underline">{r.mobile}</a>}</Meta>
+                    <Meta label="Fixe">{r.fixe && <a href={`tel:${r.fixe}`} className="underline">{r.fixe}</a>}</Meta>
+                    <div className="col-span-2"><Meta label="E-mail">{r.email && <a href={`mailto:${r.email}`} className="underline">{r.email}</a>}</Meta></div>
+                  </dl>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="w-36"><StatutCell r={r} role={role} onChange={changerStatut} /></div>
+                    <Actions r={r} role={role} onDelete={supprimer} />
                   </div>
                 </div>
-                <div className="w-32 shrink-0"><StatutCell r={r} role={role} onChange={changerStatut} /></div>
-              </div>
-              <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg p-2.5" style={{ background: 'var(--surface)' }}>
-                <Meta label="Date RDV">{r.date_rdv ? `${fmtDate(r.date_rdv)}${r.heure_rdv ? ' · ' + r.heure_rdv.slice(0, 5) : ''}` : null}</Meta>
-                <Meta label="Création">{fmtDateCreation(r.created_at)}</Meta>
-                <Meta label="Type / nature">{[r.type_rdv, r.nature].filter(Boolean).join(' · ') || null}</Meta>
-                <Meta label="Lieu">{r.lieu_rdv}</Meta>
-                <Meta label="Mobile">{r.mobile && <a href={`tel:${r.mobile}`} className="underline">{r.mobile}</a>}</Meta>
-                <Meta label="Fixe">{r.fixe && <a href={`tel:${r.fixe}`} className="underline">{r.fixe}</a>}</Meta>
-                <Meta label="E-mail">{r.email && <a href={`mailto:${r.email}`} className="underline">{r.email}</a>}</Meta>
-                <Meta label="Vérif">{r.verif}</Meta>
-                {role === 'admin' && <Meta label="Créée par">{createurs[r.created_by] ?? (r.fichier ? 'Import Excel' : null)}</Meta>}
-              </dl>
-              <div className="flex items-center justify-end border-t pt-2" style={{ borderColor: 'var(--border)' }}>
-                <Actions r={r} role={role} onDelete={supprimer} />
-              </div>
+              )}
             </div>
           )
         })}
