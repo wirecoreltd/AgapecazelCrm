@@ -127,7 +127,16 @@ export default function DefiscForm({ fiche }) {
             </select>
           </label>
         )}
-       
+        {role === 'admin' && (
+          <label className="block">
+            <span className="field-label">Conseiller</span>
+            <select name="assigned_to" defaultValue={v('assigned_to') ?? ''} className="inp" key={`c-${conseillers.length}`}>
+              <option value="">Non assigné</option>
+              {conseillers.map((c) => <option key={c.id} value={c.id}>{c.nom_complet}</option>)}
+            </select>
+          </label>
+        )}
+      </Section>
 
       <Section title="Suivi">
         <label className="block sm:col-span-2">
