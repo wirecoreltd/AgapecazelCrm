@@ -22,8 +22,8 @@ function Section({ title, children }) {
   )
 }
 // Seuls les champs affichés dans le formulaire sont envoyés : le profil financier (importé) n'est jamais écrasé
-// Heures par tranche de 15 min, de 08:00 à 21:00
-const CRENEAUX = Array.from({ length: 53 }, (_, i) => { const m = 8 * 60 + i * 15; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` })
+// Heures par tranche de 15 min, de 12:00 à 21:00
+const CRENEAUX = Array.from({ length: 37 }, (_, i) => { const m = 12 * 60 + i * 15; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` })
 
 function HeureSelect({ value }) {
   // Si la fiche porte une heure hors tranche (ex. importée à 14:10), on la garde visible pour ne pas la perdre
