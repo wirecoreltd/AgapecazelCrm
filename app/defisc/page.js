@@ -16,7 +16,7 @@ const decaler = (n) => { const d = new Date(); d.setDate(d.getDate() + n); retur
 // RDV à venir dans moins de 24 h ou aujourd'hui (et pas déjà traité) -> alerte rouge
 const ACTIFS = ['a_confirmer', 'confirme', 'reporte']
 const urgence = (r) => (ACTIFS.includes(r.statut) && r.date_rdv === decaler(1) ? 'demain' : ACTIFS.includes(r.statut) && r.date_rdv === decaler(0) ? 'aujourdhui' : null)
-const COLONNES = ['Date création', 'Civilité', 'Nom', 'Prénom', 'Type RDV', 'Nature', 'Date RDV', 'Heure RDV', 'Lieu RDV', 'Mobile', 'Fixe', 'E-mail', 'Vérif']
+const COLONNES = ['Date création', 'Civilité', 'Nom', 'Prénom', 'Type RDV', 'Nature', 'Date RDV', 'Heure RDV', 'Lieu RDV', 'Mobile', 'Fixe', 'E-mail']
 const EXPORT_PERIODES = [['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['semaine', 'Cette semaine (depuis lundi)'], ['perso', 'Plage personnalisée']]
 const PERIODES = [['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['semaine', 'Cette semaine']]
 
@@ -235,7 +235,6 @@ export default function DefiscListe() {
                     <Meta label="Type RDV">{r.type_rdv}</Meta>
                     <Meta label="Nature">{r.nature}</Meta>
                     <Meta label="Lieu">{r.lieu_rdv}</Meta>
-                    <Meta label="Vérif">{r.verif}</Meta>
                     <Meta label="Mobile">{r.mobile && <a href={`tel:${r.mobile}`} className="underline">{r.mobile}</a>}</Meta>
                     <Meta label="Fixe">{r.fixe && <a href={`tel:${r.fixe}`} className="underline">{r.fixe}</a>}</Meta>
                     <div className="col-span-2"><Meta label="E-mail">{r.email && <a href={`mailto:${r.email}`} className="underline">{r.email}</a>}</Meta></div>
@@ -288,7 +287,6 @@ export default function DefiscListe() {
                   <td className="whitespace-nowrap px-3 py-2.5">{r.mobile ?? '—'}</td>
                   <td className="whitespace-nowrap px-3 py-2.5">{r.fixe ?? '—'}</td>
                   <td className="px-3 py-2.5">{r.email ?? '—'}</td>
-                  <td className="px-3 py-2.5">{r.verif ?? '—'}</td>
                   {role === 'admin' && <td className="whitespace-nowrap px-3 py-2.5 font-medium">{createurs[r.created_by] ?? (r.fichier ? 'Import Excel' : '—')}</td>}
                   <td className="min-w-[130px] px-3 py-2.5"><StatutCell r={r} role={role} onChange={changerStatut} /></td>
                   <td className="whitespace-nowrap px-3 py-1.5"><Actions r={r} role={role} onDelete={supprimer} /></td>
