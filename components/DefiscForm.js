@@ -45,6 +45,8 @@ function HeureSelect({ date, value, onChange }) {
     </label>
   )
 }
+const TEXTES = ['civilite', 'nom', 'prenom', 'email', 'type_rdv', 'nature', 'lieu_rdv', 'commentaire', 'verif', 'notes']
+
 // fiche : fiche existante (modification) ou undefined (création)
 export default function DefiscForm({ fiche }) {
   const router = useRouter()
