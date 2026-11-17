@@ -22,25 +22,29 @@ function Section({ title, children }) {
   )
 }
 // Seuls les champs affichés dans le formulaire sont envoyés : le profil financier (importé) n'est jamais écrasé
-// Heures par tranche de 15 min, de 12:00 à 21:00
-const CRENEAUX = Array.from({ length: 37 }, (_, i) => { const m = 12 * 60 + i * 15; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` })
+// Heures par tranche de 15 min, jusqu'à 21:00 : à partir de 08:00, sauf le MARDI où l'on commence à 12:00
+const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+const creneauxPour = (date) => {
+  const mardi = !!date && new Date(`${date}T00:00:00`).getDay() === 2
+  const debut = (mardi ? 12 : 8) * 60
+  return Array.from({ length: (21 * 60 - debut) / 15 + 1 }, (_, i) => hhmm(debut + i * 15))
+}
 
-function HeureSelect({ value }) {
+function HeureSelect({ date, value, onChange }) {
+  const creneaux = creneauxPour(date)
   // Si la fiche porte une heure hors tranche (ex. importée à 14:10), on la garde visible pour ne pas la perdre
-  const options = value && !CRENEAUX.includes(value) ? [value, ...CRENEAUX].sort() : CRENEAUX
+  const options = value && !creneaux.includes(value) ? [value, ...creneaux].sort() : creneaux
   return (
     <label className="block">
       <span className="field-label">Heure</span>
-      <select name="heure_rdv" defaultValue={value ?? ''} className="inp">
+      <select name="heure_rdv" value={value} onChange={(e) => onChange(e.target.value)} className="inp">
         <option value="">Choisir…</option>
         {options.map((h) => <option key={h} value={h}>{h.replace(':', 'h')}</option>)}
       </select>
+      {date && new Date(`${date}T00:00:00`).getDay() === 2 && <span className="mt-1 block text-[12px]" style={{ color: 'var(--muted)' }}>Mardi : RDV à partir de 12h</span>}
     </label>
   )
 }
-
-const TEXTES = ['civilite', 'nom', 'prenom', 'email', 'type_rdv', 'nature', 'lieu_rdv', 'commentaire', 'verif', 'notes']
-
 // fiche : fiche existante (modification) ou undefined (création)
 export default function DefiscForm({ fiche }) {
   const router = useRouter()
@@ -48,6 +52,10 @@ export default function DefiscForm({ fiche }) {
   const [busy, setBusy] = useState(false)
   const [role, setRole] = useState(null)
   const [conseillers, setConseillers] = useState([])
+  const [dateRdv, setDateRdv] = useState(fiche?.date_rdv ?? '')
+  const [heure, setHeure] = useState(fiche?.heure_rdv?.slice(0, 5) ?? '')
+  // Changement de date : si l'heure choisie n'existe pas ce jour-là (ex. matin un mardi), on la vide
+  const changerDate = (d) => { setDateRdv(d); if (heure && !creneauxPour(d).includes(heure)) setHeure('') }
 
   useEffect(() => { (async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -103,8 +111,11 @@ export default function DefiscForm({ fiche }) {
       </Section>
 
       <Section title="Rendez-vous">
-        <Field name="date_rdv" label="Date" type="date" value={v('date_rdv')} />
-        <HeureSelect value={v('heure_rdv')?.slice(0, 5)} />
+        <label className="block">
+          <span className="field-label">Date</span>
+          <input name="date_rdv" type="date" value={dateRdv} onChange={(e) => changerDate(e.target.value)} className="inp" />
+        </label>
+        <HeureSelect date={dateRdv} value={heure} onChange={setHeure} />
         <Field name="type_rdv" label="Type de RDV (Visio, présentiel…)" value={v('type_rdv')} />
         <Field name="nature" label="Nature (IMMO…)" value={v('nature')} />
         <Field name="lieu_rdv" label="Lieu" value={v('lieu_rdv')} />
