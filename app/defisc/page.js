@@ -13,9 +13,19 @@ const fmtDate = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR'
 // Date locale AAAA-MM-JJ (toISOString donnerait la date UTC, décalée la nuit)
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const decaler = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d) }
-// RDV à venir dans moins de 24 h ou aujourd'hui (et pas déjà traité) -> alerte rouge
+// RDV actifs (pas encore traités)
 const ACTIFS = ['a_confirmer', 'confirme', 'reporte']
-const urgence = (r) => (ACTIFS.includes(r.statut) && r.date_rdv === decaler(1) ? 'demain' : ACTIFS.includes(r.statut) && r.date_rdv === decaler(0) ? 'aujourdhui' : null)
+// Moment du RDV (date + heure). Sans heure : fin de journée.
+const momentRdv = (r) => (r.date_rdv ? new Date(`${r.date_rdv}T${r.heure_rdv ? r.heure_rdv.slice(0, 5) : '23:59'}:00`) : null)
+// Alerte : 'demain' / 'aujourdhui' (rouge, RDV pas encore atteint) · 'atteint' (orange, heure du RDV dépassée)
+const urgence = (r, now) => {
+  if (!ACTIFS.includes(r.statut) || !r.date_rdv) return null
+  const m = momentRdv(r)
+  if (m && now >= m) return 'atteint'
+  return r.date_rdv === iso(now) ? 'aujourdhui' : r.date_rdv === decaler(1) ? 'demain' : null
+}
+const COULEUR_ALERTE = { demain: 'var(--danger)', aujourdhui: 'var(--danger)', atteint: '#d97706' }
+const LIBELLE_ALERTE = { demain: '⚠️ RDV demain', aujourdhui: "⚠️ RDV aujourd'hui", atteint: '⏰ Date de RDV atteinte' }
 const COLONNES = ['Date création', 'Civilité', 'Nom', 'Prénom', 'Type RDV', 'Nature', 'Date RDV', 'Heure RDV', 'Lieu RDV', 'Mobile', 'Fixe', 'E-mail']
 const EXPORT_PERIODES = [['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['semaine', 'Cette semaine (depuis lundi)'], ['perso', 'Plage personnalisée']]
 const PERIODES = [['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['semaine', 'Cette semaine']]
@@ -50,6 +60,8 @@ function StatutCell({ r, role, onChange }) {
 
 export default function DefiscListe() {
   const [rows, setRows] = useState([])
+  const [now, setNow] = useState(() => new Date()) // rafraîchi chaque minute : la couleur change dès que l'heure du RDV est atteinte
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(t) }, [])
   const [createurs, setCreateurs] = useState({}) // id -> nom, pour « Créée par »
   const [createur, setCreateur] = useState('')
   const [role, setRole] = useState(null)
@@ -98,6 +110,8 @@ export default function DefiscListe() {
     const today = iso(new Date())
     const fin = new Date(); fin.setDate(fin.getDate() + (7 - (fin.getDay() || 7))) // dimanche
     const needle = q.trim().toLowerCase().replace(/\s/g, '')
+    // Tri : RDV à venir du plus proche au plus lointain, puis RDV passés (le plus récent d'abord), puis sans date
+    const rang = (r) => { const m = momentRdv(r); return !m ? [2, 0] : m >= now ? [0, m.getTime()] : [1, -m.getTime()] }
     return rows.filter((r) => {
       if (statuts.length && !statuts.includes(r.statut)) return false
       if (createur && r.created_by !== createur) return false
@@ -108,8 +122,8 @@ export default function DefiscListe() {
         if (!hay.includes(needle)) return false
       }
       return true
-    })
-  }, [rows, q, statuts, periode, createur])
+    }).sort((a, b) => { const [ga, va] = rang(a); const [gb, vb] = rang(b); return ga - gb || va - vb })
+  }, [rows, q, statuts, periode, createur, now])
 
   const toggle = (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toutCoche = filtrees.length > 0 && filtrees.every((r) => sel.has(r.id))
@@ -207,13 +221,13 @@ export default function DefiscListe() {
       {/* Mobile : cartes repliables (résumé -> détails au clic) */}
       <div className="flex flex-col gap-3 sm:hidden">
         {filtrees.map((r) => {
-          const urg = urgence(r)
+          const urg = urgence(r, now)
           const ouvert = ouverts.has(r.id)
           const nom = [r.civilite, r.prenom, r.nom].filter(Boolean).join(' ') || '—'
           const rdv = r.date_rdv ? `${fmtDate(r.date_rdv)}${r.heure_rdv ? ' · ' + r.heure_rdv.slice(0, 5) : ''}` : '—'
           const par = role === 'admin' ? (createurs[r.created_by] ?? (r.fichier ? 'Import Excel' : '—')) : null
           return (
-            <div key={r.id} className="card overflow-hidden" style={{ borderLeft: `4px solid ${urg ? 'var(--danger)' : (STATUTS[r.statut]?.color ?? '#666')}`, background: sel.has(r.id) ? 'var(--accent-soft)' : undefined }}>
+            <div key={r.id} className="card overflow-hidden" style={{ borderLeft: `4px solid ${urg ? COULEUR_ALERTE[urg] : (STATUTS[r.statut]?.color ?? '#666')}`, background: sel.has(r.id) ? 'var(--accent-soft)' : undefined }}>
               <div className="flex items-start gap-3 p-4">
                 {role === 'admin' && <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={sel.has(r.id)} onChange={() => toggle(r.id)} aria-label="Cocher la fiche" />}
                 <button type="button" onClick={() => deplier(r.id)} aria-expanded={ouvert} className="min-w-0 flex-1 text-left">
@@ -221,7 +235,7 @@ export default function DefiscListe() {
                     <span className="break-words font-semibold">{nom}</span>
                     <span aria-hidden className="mt-0.5 shrink-0 text-[12px]" style={{ color: 'var(--muted)' }}>{ouvert ? '▲' : '▼'}</span>
                   </div>
-                  {urg && <p className="mt-0.5 text-[12px] font-semibold" style={{ color: 'var(--danger)' }}>⚠️ RDV {urg === 'demain' ? 'demain' : "aujourd'hui"}</p>}
+                  {urg && <p className="mt-0.5 text-[12px] font-semibold" style={{ color: COULEUR_ALERTE[urg] }}>{LIBELLE_ALERTE[urg]}</p>}
                   <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
                     <Meta label="Création">{fmtDateCreation(r.created_at)}</Meta>
                     <Meta label="RDV">{rdv}</Meta>
@@ -266,8 +280,8 @@ export default function DefiscListe() {
           </thead>
           <tbody>
             {filtrees.map((r) => {
-              const urg = urgence(r)
-              const marque = urg ? { boxShadow: 'inset 5px 0 0 var(--danger)' } : undefined
+              const urg = urgence(r, now)
+              const marque = urg ? { boxShadow: `inset 5px 0 0 ${COULEUR_ALERTE[urg]}` } : undefined
               return (
                 <tr key={r.id} className="border-b last:border-0" style={{ borderColor: 'var(--border)', background: sel.has(r.id) ? 'var(--accent-soft)' : undefined }}>
                   {role === 'admin' && (
