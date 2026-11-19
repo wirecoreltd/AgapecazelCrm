@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
 import DefiscForm from '@/components/DefiscForm'
-import { estVerrouillee, STATUTS } from '@/lib/defisc'
+import { estVerrouillee } from '@/lib/defisc'
 
 export default function Fiche() {
   const { id } = useParams()
@@ -22,7 +22,7 @@ export default function Fiche() {
   })() }, [id])
 
   const titre = fiche ? `${fiche.prenom ?? ''} ${fiche.nom ?? ''}`.trim() || 'Fiche' : 'Fiche'
-  const verrouillee = fiche && role !== undefined && estVerrouillee(fiche.statut, role)
+  const verrouillee = fiche && role !== undefined && estVerrouillee(fiche, role)
 
   return (
     <AppShell backHref="/defisc" title={titre}>
@@ -30,7 +30,7 @@ export default function Fiche() {
         <p style={{ color: 'var(--muted)' }}>{msg}</p>
       ) : verrouillee ? (
         <div className="card p-6 text-sm">
-          <p className="font-medium">Cette fiche est « {STATUTS[fiche.statut]?.label} » : elle n'est plus modifiable.</p>
+          <p className="font-medium">Cette fiche est « Validée » : elle n'est plus modifiable.</p>
           <p className="mt-1" style={{ color: 'var(--muted)' }}>Seul un administrateur peut la modifier.</p>
           <Link href={`/defisc/${fiche.id}/details`} className="btn-accent mt-4 inline-block">Voir les détails</Link>
         </div>
