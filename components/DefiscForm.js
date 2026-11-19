@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { STATUTS, STATUT_KEYS, normFR, COMMENTAIRE_MODELE, estModeleVide } from '@/lib/defisc'
+import { STATUTS_CC, STATUT_CC_KEYS, STATUTS_ADMIN, STATUT_ADMIN_KEYS, normFR, COMMENTAIRE_MODELE, estModeleVide } from '@/lib/defisc'
 
 function Field({ name, label, value, type = 'text', required, step }) {
   return (
@@ -80,7 +80,8 @@ export default function DefiscForm({ fiche }) {
     data.fixe = normFR(f.fixe) || null
     data.date_rdv = f.date_rdv || null
     data.heure_rdv = f.heure_rdv || null
-    if (role === 'admin') data.statut = f.statut || 'a_confirmer' // statut : admin seulement (nouvelle fiche = « À confirmer » par défaut)
+    data.statut_cc = f.statut_cc || 'a_confirmer' // nouvelle fiche = « À confirmer » par défaut
+    if (role === 'admin') data.statut_admin = f.statut_admin || null // statut admin : admin seulement
     if (role === 'admin') data.assigned_to = f.assigned_to || null
 
     let error
@@ -121,11 +122,18 @@ export default function DefiscForm({ fiche }) {
         <Field name="type_rdv" label="Type de RDV (Visio, présentiel…)" value={v('type_rdv')} />
         <Field name="nature" label="Nature (IMMO…)" value={v('nature')} />
         <Field name="lieu_rdv" label="Lieu" value={v('lieu_rdv')} />
+        <label className="block">
+          <span className="field-label">Statut call center</span>
+          <select name="statut_cc" defaultValue={v('statut_cc') ?? 'a_confirmer'} className="inp">
+            {STATUT_CC_KEYS.map((k) => <option key={k} value={k}>{STATUTS_CC[k].label}</option>)}
+          </select>
+        </label>
         {role === 'admin' && (
           <label className="block">
-            <span className="field-label">Statut</span>
-            <select name="statut" defaultValue={v('statut') ?? 'a_confirmer'} className="inp">
-              {STATUT_KEYS.map((k) => <option key={k} value={k}>{STATUTS[k].label}</option>)}
+            <span className="field-label">Statut administrateur</span>
+            <select name="statut_admin" defaultValue={v('statut_admin') ?? ''} className="inp">
+              <option value="">—</option>
+              {STATUT_ADMIN_KEYS.map((k) => <option key={k} value={k}>{STATUTS_ADMIN[k].label}</option>)}
             </select>
           </label>
         )}
