@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
+import RetourDefisc from '@/components/RetourDefisc'
 import { STATUTS_CC, STATUTS_ADMIN, estVerrouillee } from '@/lib/defisc'
 
 const date = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : null)
@@ -50,6 +51,7 @@ export default function DetailsFiche() {
             ['Date', date(f.date_rdv)], ['Heure', f.heure_rdv?.slice(0, 5)], ['Type', f.type_rdv],
             ['Nature', f.nature], ['Lieu', f.lieu_rdv], ['Vérif', f.verif]]} />
           <Bloc titre="Suivi" lignes={[['Commentaire d\'origine', f.commentaire], ['Notes', f.notes]]} />
+          {['admin', 'call_center'].includes(role) && <RetourDefisc ficheId={f.id} role={role} />}
         </div>
       )}
     </AppShell>
