@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
-import { STATUTS, STATUT_KEYS, estVerrouillee } from '@/lib/defisc'
+import { STATUTS_CC, STATUT_CC_KEYS, STATUTS_ADMIN, STATUT_ADMIN_KEYS, estVerrouillee, peutChangerStatutCC, estActif } from '@/lib/defisc'
 
 const fmtDateCreation = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—')
 // Lundi de la semaine en cours (AAAA-MM-JJ)
@@ -13,13 +13,11 @@ const fmtDate = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR'
 // Date locale AAAA-MM-JJ (toISOString donnerait la date UTC, décalée la nuit)
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const decaler = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d) }
-// RDV actifs (pas encore traités)
-const ACTIFS = ['a_confirmer', 'confirme', 'reporte']
 // Moment du RDV (date + heure). Sans heure : fin de journée.
 const momentRdv = (r) => (r.date_rdv ? new Date(`${r.date_rdv}T${r.heure_rdv ? r.heure_rdv.slice(0, 5) : '23:59'}:00`) : null)
 // Alerte : 'demain' / 'aujourdhui' (rouge, RDV pas encore atteint) · 'atteint' (orange, heure du RDV dépassée)
 const urgence = (r, now) => {
-  if (!ACTIFS.includes(r.statut) || !r.date_rdv) return null
+  if (!estActif(r) || !r.date_rdv) return null
   const m = momentRdv(r)
   if (m && now >= m) return 'atteint'
   return r.date_rdv === iso(now) ? 'aujourdhui' : r.date_rdv === decaler(1) ? 'demain' : null
@@ -41,20 +39,63 @@ const Meta = ({ label, children }) => (
 function Actions({ r, role, onDelete }) {
   return (
     <div className="flex items-center gap-1">
-      {!estVerrouillee(r.statut, role) && <Link href={`/defisc/${r.id}`} className="ico" title="Modifier" aria-label="Modifier">✏️</Link>}
+      {!estVerrouillee(r, role) && <Link href={`/defisc/${r.id}`} className="ico" title="Modifier" aria-label="Modifier">✏️</Link>}
       <Link href={`/defisc/${r.id}/details`} className="ico" title="Détails" aria-label="Détails">🔍</Link>
       {role === 'admin' && <button type="button" onClick={() => onDelete(r)} className="ico" title="Supprimer" aria-label="Supprimer">🗑️</button>}
     </div>
   )
 }
 
-function StatutCell({ r, role, onChange }) {
-  return role === 'admin' ? (
-    <select value={r.statut} onChange={(e) => onChange(r.id, e.target.value)} className="w-full rounded-lg border-0 px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS[r.statut]?.color, colorScheme: 'light' }}>
-      {STATUT_KEYS.map((k) => <option key={k} value={k} style={{ color: '#1e293b', background: '#fff' }}>{STATUTS[k].label}</option>)}
+const SELECT_CLS = 'w-full rounded-lg border-0 px-2.5 py-1.5 text-[12px] font-medium text-white'
+const PILL_CLS = 'inline-block rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-white'
+
+// Statut call center : modifiable par le call center (tant que l'admin n'a pas décidé) et par l'admin
+function StatutCC({ r, role, onChange }) {
+  const def = STATUTS_CC[r.statut_cc]
+  return peutChangerStatutCC(r, role) ? (
+    <select value={r.statut_cc} onChange={(e) => onChange(r.id, 'statut_cc', e.target.value)} className={SELECT_CLS} style={{ background: def?.color, colorScheme: 'light' }}>
+      {STATUT_CC_KEYS.map((k) => <option key={k} value={k} style={{ color: '#1e293b', background: '#fff' }}>{STATUTS_CC[k].label}</option>)}
     </select>
   ) : (
-    <span className="inline-block rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS[r.statut]?.color ?? '#666' }}>{STATUTS[r.statut]?.label ?? r.statut}</span>
+    <span className={PILL_CLS} style={{ background: def?.color ?? '#666' }}>{def?.label ?? r.statut_cc}</span>
+  )
+}
+
+// Statut administrateur : modifiable par l'admin uniquement, vide par défaut
+function StatutAdmin({ r, role, onChange }) {
+  const def = STATUTS_ADMIN[r.statut_admin]
+  if (role === 'admin') {
+    return (
+      <select value={r.statut_admin ?? ''} onChange={(e) => onChange(r.id, 'statut_admin', e.target.value || null)} className={SELECT_CLS}
+        style={r.statut_admin ? { background: def?.color, colorScheme: 'light' } : { background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)', colorScheme: 'light' }}>
+        <option value="" style={{ color: '#1e293b', background: '#fff' }}>—</option>
+        {STATUT_ADMIN_KEYS.map((k) => <option key={k} value={k} style={{ color: '#1e293b', background: '#fff' }}>{STATUTS_ADMIN[k].label}</option>)}
+      </select>
+    )
+  }
+  return r.statut_admin
+    ? <span className={PILL_CLS} style={{ background: def?.color ?? '#666' }}>{def?.label ?? r.statut_admin}</span>
+    : <span style={{ color: 'var(--muted)' }}>—</span>
+}
+
+// Rangée de filtres par statut (sélection multiple, « Tous » = aucun filtre)
+function Chips({ titre, cles, defs, sel, setSel, counts }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="w-full text-[10px] font-medium uppercase tracking-wide sm:w-auto sm:min-w-[84px]" style={{ color: 'var(--muted)' }}>{titre}</span>
+      <button type="button" onClick={() => setSel([])} className="rounded-full border px-3 py-1 text-[12px] font-medium"
+        style={sel.length === 0 ? { background: 'var(--ink)', color: '#fff', borderColor: 'var(--ink)' } : { color: 'var(--muted)', borderColor: 'var(--border)' }}>Tous</button>
+      {cles.map((k) => {
+        const on = sel.includes(k)
+        return (
+          <button key={k} type="button" onClick={() => setSel(on ? sel.filter((y) => y !== k) : [...sel, k])}
+            className="rounded-full border px-3 py-1 text-[12px] font-medium"
+            style={on ? { background: defs[k].color, color: '#fff', borderColor: defs[k].color } : { color: 'var(--ink)', borderColor: 'var(--border)' }}>
+            {defs[k].label} <span className="opacity-70">{counts[k] ?? 0}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -67,7 +108,8 @@ export default function DefiscListe() {
   const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
-  const [statuts, setStatuts] = useState([])
+  const [statutsCC, setStatutsCC] = useState([])
+  const [statutsAdmin, setStatutsAdmin] = useState([])
   const [periode, setPeriode] = useState('tous')
   const [err, setErr] = useState('')
   const [sel, setSel] = useState(new Set()) // fiches cochées
@@ -94,9 +136,10 @@ export default function DefiscListe() {
     load()
   })() }, [])
 
-  const changerStatut = async (id, statut) => {
-    setRows((r) => r.map((x) => (x.id === id ? { ...x, statut } : x)))
-    const { error } = await supabase.from('defisc_leads').update({ statut }).eq('id', id)
+  // champ : 'statut_cc' ou 'statut_admin'
+  const changerStatut = async (id, champ, valeur) => {
+    setRows((r) => r.map((x) => (x.id === id ? { ...x, [champ]: valeur } : x)))
+    const { error } = await supabase.from('defisc_leads').update({ [champ]: valeur }).eq('id', id)
     if (error) { setErr(error.message); load() }
   }
   const supprimer = async (r) => {
@@ -105,7 +148,9 @@ export default function DefiscListe() {
     error ? setErr(error.message) : setRows((x) => x.filter((y) => y.id !== r.id))
   }
 
-  const counts = useMemo(() => rows.reduce((a, r) => ({ ...a, [r.statut]: (a[r.statut] ?? 0) + 1 }), {}), [rows])
+  const compter = (champ) => rows.reduce((a, r) => (r[champ] ? { ...a, [r[champ]]: (a[r[champ]] ?? 0) + 1 } : a), {})
+  const countsCC = useMemo(() => compter('statut_cc'), [rows])
+  const countsAdmin = useMemo(() => compter('statut_admin'), [rows])
   const filtrees = useMemo(() => {
     const today = iso(new Date())
     const fin = new Date(); fin.setDate(fin.getDate() + (7 - (fin.getDay() || 7))) // dimanche
@@ -113,7 +158,8 @@ export default function DefiscListe() {
     // Tri : RDV à venir du plus proche au plus lointain, puis RDV passés (le plus récent d'abord), puis sans date
     const rang = (r) => { const m = momentRdv(r); return !m ? [2, 0] : m >= now ? [0, m.getTime()] : [1, -m.getTime()] }
     return rows.filter((r) => {
-      if (statuts.length && !statuts.includes(r.statut)) return false
+      if (statutsCC.length && !statutsCC.includes(r.statut_cc)) return false
+      if (statutsAdmin.length && !statutsAdmin.includes(r.statut_admin)) return false
       if (createur && r.created_by !== createur) return false
       if (periode === 'aujourdhui' && r.date_rdv !== today) return false
       if (periode === 'semaine' && !(r.date_rdv >= today && r.date_rdv <= iso(fin))) return false
@@ -123,7 +169,7 @@ export default function DefiscListe() {
       }
       return true
     }).sort((a, b) => { const [ga, va] = rang(a); const [gb, vb] = rang(b); return ga - gb || va - vb })
-  }, [rows, q, statuts, periode, createur, now])
+  }, [rows, q, statutsCC, statutsAdmin, periode, createur, now])
 
   const toggle = (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toutCoche = filtrees.length > 0 && filtrees.every((r) => sel.has(r.id))
@@ -201,19 +247,9 @@ export default function DefiscListe() {
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        <button type="button" onClick={() => setStatuts([])} className="rounded-full border px-3 py-1 text-[12px] font-medium"
-          style={statuts.length === 0 ? { background: 'var(--ink)', color: '#fff', borderColor: 'var(--ink)' } : { color: 'var(--muted)', borderColor: 'var(--border)' }}>Tous</button>
-        {STATUT_KEYS.map((s) => {
-          const on = statuts.includes(s)
-          return (
-            <button key={s} type="button" onClick={() => setStatuts((x) => (on ? x.filter((y) => y !== s) : [...x, s]))}
-              className="rounded-full border px-3 py-1 text-[12px] font-medium"
-              style={on ? { background: STATUTS[s].color, color: '#fff', borderColor: STATUTS[s].color } : { color: 'var(--ink)', borderColor: 'var(--border)' }}>
-              {STATUTS[s].label} <span className="opacity-70">{counts[s] ?? 0}</span>
-            </button>
-          )
-        })}
+      <div className="mb-4 space-y-2">
+        <Chips titre="Call center" cles={STATUT_CC_KEYS} defs={STATUTS_CC} sel={statutsCC} setSel={setStatutsCC} counts={countsCC} />
+        <Chips titre="Admin" cles={STATUT_ADMIN_KEYS} defs={STATUTS_ADMIN} sel={statutsAdmin} setSel={setStatutsAdmin} counts={countsAdmin} />
       </div>
 
       {err && <p className="mb-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{err}</p>}
@@ -227,7 +263,7 @@ export default function DefiscListe() {
           const rdv = r.date_rdv ? `${fmtDate(r.date_rdv)}${r.heure_rdv ? ' · ' + r.heure_rdv.slice(0, 5) : ''}` : '—'
           const par = role === 'admin' ? (createurs[r.created_by] ?? (r.fichier ? 'Import Excel' : '—')) : null
           return (
-            <div key={r.id} className="card overflow-hidden" style={{ borderLeft: `4px solid ${urg ? COULEUR_ALERTE[urg] : (STATUTS[r.statut]?.color ?? '#666')}`, background: sel.has(r.id) ? 'var(--accent-soft)' : undefined }}>
+            <div key={r.id} className="card overflow-hidden" style={{ borderLeft: `4px solid ${urg ? COULEUR_ALERTE[urg] : (STATUTS_ADMIN[r.statut_admin]?.color ?? STATUTS_CC[r.statut_cc]?.color ?? '#666')}`, background: sel.has(r.id) ? 'var(--accent-soft)' : undefined }}>
               <div className="flex items-start gap-3 p-4">
                 {role === 'admin' && <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={sel.has(r.id)} onChange={() => toggle(r.id)} aria-label="Cocher la fiche" />}
                 <button type="button" onClick={() => deplier(r.id)} aria-expanded={ouvert} className="min-w-0 flex-1 text-left">
@@ -253,9 +289,12 @@ export default function DefiscListe() {
                     <Meta label="Fixe">{r.fixe && <a href={`tel:${r.fixe}`} className="underline">{r.fixe}</a>}</Meta>
                     <div className="col-span-2"><Meta label="E-mail">{r.email && <a href={`mailto:${r.email}`} className="underline">{r.email}</a>}</Meta></div>
                   </dl>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="w-36"><StatutCell r={r} role={role} onChange={changerStatut} /></div>
+                  <div className="flex items-center justify-end gap-3">
                     <Actions r={r} role={role} onDelete={supprimer} />
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div><p className="mb-1 text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Statut call center</p><StatutCC r={r} role={role} onChange={changerStatut} /></div>
+                    <div><p className="mb-1 text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Statut admin</p><StatutAdmin r={r} role={role} onChange={changerStatut} /></div>
                   </div>
                 </div>
               )}
@@ -274,7 +313,8 @@ export default function DefiscListe() {
               {role === 'admin' && <th className="px-3 py-2.5"><input type="checkbox" checked={toutCoche} onChange={toggleTout} aria-label="Tout cocher" /></th>}
               {COLONNES.map((h) => <th key={h} className="whitespace-nowrap px-3 py-2.5 font-medium">{h}</th>)}
               {role === 'admin' && <th className="whitespace-nowrap px-3 py-2.5 font-medium">Créée par</th>}
-              <th className="px-3 py-2.5 font-medium">Statut</th>
+              <th className="whitespace-nowrap px-3 py-2.5 font-medium">Statut call center</th>
+              <th className="whitespace-nowrap px-3 py-2.5 font-medium">Statut admin</th>
               <th className="px-3 py-2.5" />
             </tr>
           </thead>
@@ -291,7 +331,7 @@ export default function DefiscListe() {
                   )}
                   <td className="whitespace-nowrap px-3 py-2.5" style={role !== 'admin' ? marque : undefined}>{fmtDateCreation(r.created_at)}</td>
                   <td className="px-3 py-2.5">{r.civilite ?? '—'}</td>
-                  <td className="px-3 py-2.5"><Link href={estVerrouillee(r.statut, role) ? `/defisc/${r.id}/details` : `/defisc/${r.id}`} className="font-medium underline-offset-2 hover:underline">{r.nom ?? '—'}</Link></td>
+                  <td className="px-3 py-2.5"><Link href={estVerrouillee(r, role) ? `/defisc/${r.id}/details` : `/defisc/${r.id}`} className="font-medium underline-offset-2 hover:underline">{r.nom ?? '—'}</Link></td>
                   <td className="px-3 py-2.5">{r.prenom ?? '—'}</td>
                   <td className="px-3 py-2.5">{r.type_rdv ?? '—'}</td>
                   <td className="px-3 py-2.5">{r.nature ?? '—'}</td>
@@ -302,13 +342,14 @@ export default function DefiscListe() {
                   <td className="whitespace-nowrap px-3 py-2.5">{r.fixe ?? '—'}</td>
                   <td className="px-3 py-2.5">{r.email ?? '—'}</td>
                   {role === 'admin' && <td className="whitespace-nowrap px-3 py-2.5 font-medium">{createurs[r.created_by] ?? (r.fichier ? 'Import Excel' : '—')}</td>}
-                  <td className="min-w-[130px] px-3 py-2.5"><StatutCell r={r} role={role} onChange={changerStatut} /></td>
+                  <td className="min-w-[130px] px-3 py-2.5"><StatutCC r={r} role={role} onChange={changerStatut} /></td>
+                  <td className="min-w-[130px] px-3 py-2.5"><StatutAdmin r={r} role={role} onChange={changerStatut} /></td>
                   <td className="whitespace-nowrap px-3 py-1.5"><Actions r={r} role={role} onDelete={supprimer} /></td>
                 </tr>
               )
             })}
-            {!loading && !filtrees.length && <tr><td colSpan={COLONNES.length + 4} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Aucune fiche.</td></tr>}
-            {loading && <tr><td colSpan={COLONNES.length + 4} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Chargement…</td></tr>}
+            {!loading && !filtrees.length && <tr><td colSpan={COLONNES.length + 5} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Aucune fiche.</td></tr>}
+            {loading && <tr><td colSpan={COLONNES.length + 5} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Chargement…</td></tr>}
           </tbody>
         </table>
       </div>
