@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
-import { ligneVersFiche, reperer, cle9, STATUTS } from '@/lib/defisc'
+import { ligneVersFiche, reperer, cle9, STATUTS_CC } from '@/lib/defisc'
 
 const fmtDate = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR') : '—')
 
@@ -69,7 +69,7 @@ export default function ImportDefisc() {
   const importer = async () => {
     setBusy(true); setMsg('')
     const { data: { user } } = await supabase.auth.getUser()
-    const lignes = aImporter.map(({ _ligne, _doublon, _vide, ...f }) => ({ ...f, fichier, created_by: user.id, statut: 'a_confirmer' }))
+    const lignes = aImporter.map(({ _ligne, _doublon, _vide, ...f }) => ({ ...f, fichier, created_by: user.id, statut_cc: 'a_confirmer' }))
     for (let i = 0; i < lignes.length; i += 200) {
       const { error } = await supabase.from('defisc_leads').insert(lignes.slice(i, i + 200))
       if (error) { setBusy(false); return setMsg(`Erreur après ${i} fiche(s) importée(s) : ${error.message}`) }
@@ -134,7 +134,7 @@ export default function ImportDefisc() {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-[12px]" style={{ color: 'var(--muted)' }}>Statut initial : « {STATUTS.a_confirmer.label} ». Le commentaire d'origine est conservé tel quel sur chaque fiche.</p>
+          <p className="mt-3 text-[12px]" style={{ color: 'var(--muted)' }}>Statut initial : « {STATUTS_CC.a_confirmer.label} ». Le commentaire d'origine est conservé tel quel sur chaque fiche.</p>
         </>
       )}
     </AppShell>
