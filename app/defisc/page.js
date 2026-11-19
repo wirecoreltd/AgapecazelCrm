@@ -78,6 +78,14 @@ function StatutAdmin({ r, role, onChange }) {
     : <span style={{ color: 'var(--muted)' }}>—</span>
 }
 
+// Filtre unique : statuts call center (cc:) + statuts admin (ad:). « Reporté » existe des deux côtés, donc on le distingue.
+const FILTRE_DEFS = {
+  ...Object.fromEntries(STATUT_CC_KEYS.map((k) => [`cc:${k}`, { ...STATUTS_CC[k], label: k === 'reporte' ? 'Reporté call' : STATUTS_CC[k].label }])),
+  ...Object.fromEntries(STATUT_ADMIN_KEYS.map((k) => [`ad:${k}`, { ...STATUTS_ADMIN[k], label: k === 'reporte' ? 'Reporté admin' : STATUTS_ADMIN[k].label }])),
+}
+const FILTRE_KEYS = Object.keys(FILTRE_DEFS)
+const matchFiltre = (r, key) => (key.startsWith('cc:') ? r.statut_cc === key.slice(3) : r.statut_admin === key.slice(3))
+
 // Rangée de filtres par statut (sélection multiple, « Tous » = aucun filtre)
 function Chips({ titre, cles, defs, sel, setSel, counts }) {
   return (
@@ -108,8 +116,7 @@ export default function DefiscListe() {
   const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
-  const [statutsCC, setStatutsCC] = useState([])
-  const [statutsAdmin, setStatutsAdmin] = useState([])
+  const [statuts, setStatuts] = useState([])
   const [periode, setPeriode] = useState('tous')
   const [err, setErr] = useState('')
   const [sel, setSel] = useState(new Set()) // fiches cochées
@@ -148,9 +155,14 @@ export default function DefiscListe() {
     error ? setErr(error.message) : setRows((x) => x.filter((y) => y.id !== r.id))
   }
 
-  const compter = (champ) => rows.reduce((a, r) => (r[champ] ? { ...a, [r[champ]]: (a[r[champ]] ?? 0) + 1 } : a), {})
-  const countsCC = useMemo(() => compter('statut_cc'), [rows])
-  const countsAdmin = useMemo(() => compter('statut_admin'), [rows])
+  const counts = useMemo(() => {
+    const c = {}
+    for (const r of rows) {
+      if (r.statut_cc) c[`cc:${r.statut_cc}`] = (c[`cc:${r.statut_cc}`] ?? 0) + 1
+      if (r.statut_admin) c[`ad:${r.statut_admin}`] = (c[`ad:${r.statut_admin}`] ?? 0) + 1
+    }
+    return c
+  }, [rows])
   const filtrees = useMemo(() => {
     const today = iso(new Date())
     const fin = new Date(); fin.setDate(fin.getDate() + (7 - (fin.getDay() || 7))) // dimanche
@@ -158,8 +170,7 @@ export default function DefiscListe() {
     // Tri : RDV à venir du plus proche au plus lointain, puis RDV passés (le plus récent d'abord), puis sans date
     const rang = (r) => { const m = momentRdv(r); return !m ? [2, 0] : m >= now ? [0, m.getTime()] : [1, -m.getTime()] }
     return rows.filter((r) => {
-      if (statutsCC.length && !statutsCC.includes(r.statut_cc)) return false
-      if (statutsAdmin.length && !statutsAdmin.includes(r.statut_admin)) return false
+      if (statuts.length && !statuts.some((k) => matchFiltre(r, k))) return false
       if (createur && r.created_by !== createur) return false
       if (periode === 'aujourdhui' && r.date_rdv !== today) return false
       if (periode === 'semaine' && !(r.date_rdv >= today && r.date_rdv <= iso(fin))) return false
@@ -169,7 +180,7 @@ export default function DefiscListe() {
       }
       return true
     }).sort((a, b) => { const [ga, va] = rang(a); const [gb, vb] = rang(b); return ga - gb || va - vb })
-  }, [rows, q, statutsCC, statutsAdmin, periode, createur, now])
+  }, [rows, q, statuts, periode, createur, now])
 
   const toggle = (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toutCoche = filtrees.length > 0 && filtrees.every((r) => sel.has(r.id))
@@ -248,8 +259,7 @@ export default function DefiscListe() {
       )}
 
       <div className="mb-4 space-y-2">
-        <Chips titre="Call center" cles={STATUT_CC_KEYS} defs={STATUTS_CC} sel={statutsCC} setSel={setStatutsCC} counts={countsCC} />
-        <Chips titre="Admin" cles={STATUT_ADMIN_KEYS} defs={STATUTS_ADMIN} sel={statutsAdmin} setSel={setStatutsAdmin} counts={countsAdmin} />
+        <Chips titre="Statut" cles={FILTRE_KEYS} defs={FILTRE_DEFS} sel={statuts} setSel={setStatuts} counts={counts} />
       </div>
 
       {err && <p className="mb-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{err}</p>}
