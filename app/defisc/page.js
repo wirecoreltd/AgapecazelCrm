@@ -90,12 +90,11 @@ const matchFiltre = (r, key) => (key.startsWith('cc:') ? r.statut_cc === key.sli
 function Chips({ titre, cles, defs, sel, setSel, counts }) {
   const [open, setOpen] = useState(false)
   const toggleK = (k) => setSel(sel.includes(k) ? sel.filter((y) => y !== k) : [...sel, k])
-  const resume = sel.length === 0 ? 'Tous' : sel.length === 1 ? defs[sel[0]].label : `${sel.length} statuts`
+  const resume = sel.length === 0 ? `${titre} : tous` : sel.length === 1 ? defs[sel[0]].label : `${sel.length} statuts`
   return (
-    <div className="relative flex flex-wrap items-center gap-2">
-      <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{titre}</span>
+    <div className="relative">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}
-        className="inp flex min-w-[170px] items-center justify-between gap-3 text-left text-[13px] font-medium">
+        className="inp flex w-full items-center justify-between gap-3 text-left sm:w-auto sm:min-w-[190px]">
         <span>{resume}</span><span className="text-[10px] opacity-60">{open ? '▲' : '▼'}</span>
       </button>
       {open && (
@@ -244,6 +243,7 @@ export default function DefiscListe() {
             {Object.entries(createurs).map(([id, n]) => <option key={id} value={id}>{n}</option>)}
           </select>
         )}
+        <Chips titre="Statut" cles={FILTRE_KEYS} defs={FILTRE_DEFS} sel={statuts} setSel={setStatuts} counts={counts} />
         {role === 'admin' && (
           <button type="button" onClick={() => setExportOpen((o) => !o)} className="btn-ghost max-sm:w-full" style={{ border: '1px solid var(--border-strong)' }}>
             Exporter vers Google Sheets{sel.size ? ` (${sel.size} cochée${sel.size > 1 ? 's' : ''})` : ''}
@@ -271,10 +271,6 @@ export default function DefiscListe() {
           </p>
         </div>
       )}
-
-      <div className="mb-4 space-y-2">
-        <Chips titre="Statut" cles={FILTRE_KEYS} defs={FILTRE_DEFS} sel={statuts} setSel={setStatuts} counts={counts} />
-      </div>
 
       {err && <p className="mb-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{err}</p>}
 
