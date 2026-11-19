@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
-import { STATUTS, estVerrouillee } from '@/lib/defisc'
+import { STATUTS_CC, STATUTS_ADMIN, estVerrouillee } from '@/lib/defisc'
 
 const date = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : null)
 
@@ -41,8 +41,8 @@ export default function DetailsFiche() {
   const nom = f ? [f.civilite, f.prenom, f.nom].filter(Boolean).join(' ') : ''
   return (
     <AppShell backHref="/defisc" title={nom || 'Détails'}
-      actions={f && !estVerrouillee(f.statut, role) && <Link href={`/defisc/${f.id}`} className="btn-accent">Modifier</Link>}
-      subtitle={f ? STATUTS[f.statut]?.label : undefined}>
+      actions={f && !estVerrouillee(f, role) && <Link href={`/defisc/${f.id}`} className="btn-accent">Modifier</Link>}
+      subtitle={f ? `Call center : ${STATUTS_CC[f.statut_cc]?.label ?? '—'} · Admin : ${STATUTS_ADMIN[f.statut_admin]?.label ?? '—'}` : undefined}>
       {!f ? <p style={{ color: 'var(--muted)' }}>{msg}</p> : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Bloc titre="Contact" lignes={[['Mobile', f.mobile], ['Fixe', f.fixe], ['E-mail', f.email]]} />
