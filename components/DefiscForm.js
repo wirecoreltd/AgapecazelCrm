@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import RetourDefisc from '@/components/RetourDefisc'
 import { STATUTS_CC, STATUT_CC_KEYS, STATUTS_ADMIN, STATUT_ADMIN_KEYS, normFR, COMMENTAIRE_MODELE, estModeleVide } from '@/lib/defisc'
 
 function Field({ name, label, value, type = 'text', required, step }) {
@@ -97,6 +98,7 @@ export default function DefiscForm({ fiche }) {
 
   const v = (k) => fiche?.[k]
   return (
+    <>
     <form onSubmit={submit} className="space-y-8">
       <Section title="Contact">
         <label className="block">
@@ -167,5 +169,10 @@ export default function DefiscForm({ fiche }) {
         <button disabled={busy} className="btn-accent">{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
       </div>
     </form>
+    {/* Hors du <form> (il a son propre formulaire) ; seulement sur une fiche existante */}
+    {fiche && ['admin', 'call_center'].includes(role) && (
+      <div className="mt-8"><RetourDefisc ficheId={fiche.id} role={role} /></div>
+    )}
+    </>
   )
 }
