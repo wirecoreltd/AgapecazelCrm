@@ -86,23 +86,37 @@ const FILTRE_DEFS = {
 const FILTRE_KEYS = Object.keys(FILTRE_DEFS)
 const matchFiltre = (r, key) => (key.startsWith('cc:') ? r.statut_cc === key.slice(3) : r.statut_admin === key.slice(3))
 
-// Rangée de filtres par statut (sélection multiple, « Tous » = aucun filtre)
+// Menu déroulant de filtre par statut (sélection multiple, « Tous » = aucun filtre)
 function Chips({ titre, cles, defs, sel, setSel, counts }) {
+  const [open, setOpen] = useState(false)
+  const toggleK = (k) => setSel(sel.includes(k) ? sel.filter((y) => y !== k) : [...sel, k])
+  const resume = sel.length === 0 ? 'Tous' : sel.length === 1 ? defs[sel[0]].label : `${sel.length} statuts`
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="w-full text-[10px] font-medium uppercase tracking-wide sm:w-auto sm:min-w-[84px]" style={{ color: 'var(--muted)' }}>{titre}</span>
-      <button type="button" onClick={() => setSel([])} className="rounded-full border px-3 py-1 text-[12px] font-medium"
-        style={sel.length === 0 ? { background: 'var(--ink)', color: '#fff', borderColor: 'var(--ink)' } : { color: 'var(--muted)', borderColor: 'var(--border)' }}>Tous</button>
-      {cles.map((k) => {
-        const on = sel.includes(k)
-        return (
-          <button key={k} type="button" onClick={() => setSel(on ? sel.filter((y) => y !== k) : [...sel, k])}
-            className="rounded-full border px-3 py-1 text-[12px] font-medium"
-            style={on ? { background: defs[k].color, color: '#fff', borderColor: defs[k].color } : { color: 'var(--ink)', borderColor: 'var(--border)' }}>
-            {defs[k].label} <span className="opacity-70">{counts[k] ?? 0}</span>
-          </button>
-        )
-      })}
+    <div className="relative flex flex-wrap items-center gap-2">
+      <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{titre}</span>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}
+        className="inp flex min-w-[170px] items-center justify-between gap-3 text-left text-[13px] font-medium">
+        <span>{resume}</span><span className="text-[10px] opacity-60">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="card absolute left-0 top-full z-20 mt-1 w-64 max-w-[90vw] p-1.5 shadow-lg" style={{ background: 'var(--surface, #fff)' }}>
+            <button type="button" onClick={() => setSel([])} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium hover:bg-black/5"
+              style={sel.length === 0 ? { color: 'var(--ink)' } : { color: 'var(--muted)' }}>
+              <input type="checkbox" readOnly checked={sel.length === 0} /> Tous
+            </button>
+            {cles.map((k) => (
+              <button key={k} type="button" onClick={() => toggleK(k)} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] hover:bg-black/5">
+                <input type="checkbox" readOnly checked={sel.includes(k)} />
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: defs[k].color }} />
+                <span className="flex-1">{defs[k].label}</span>
+                <span className="opacity-60">{counts[k] ?? 0}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
