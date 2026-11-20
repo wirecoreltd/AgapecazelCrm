@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import RetourDefisc from '@/components/RetourDefisc'
 import { STATUTS_CC, STATUT_CC_KEYS, STATUTS_ADMIN, STATUT_ADMIN_KEYS, normFR, COMMENTAIRE_MODELE, estModeleVide } from '@/lib/defisc'
 
 function Field({ name, label, value, type = 'text', required, step }) {
@@ -16,7 +17,7 @@ function Field({ name, label, value, type = 'text', required, step }) {
 function Section({ title, children }) {
   return (
     <div>
-      <h2 className="section-heading mb-3">{title}</h2>
+      {title && <h2 className="section-heading mb-3">{title}</h2>}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
     </div>
   )
@@ -45,8 +46,7 @@ function HeureSelect({ date, value, onChange }) {
     </label>
   )
 }
-const NATURES = ['Immo', 'Financier']
-const TEXTES = ['civilite', 'nom', 'prenom', 'email', 'type_rdv', 'nature', 'lieu_rdv', 'commentaire', 'verif', 'notes']
+const TEXTES = ['civilite', 'nom', 'prenom', 'email', 'type_rdv', 'nature', 'lieu_rdv', 'commentaire', 'notes']
 
 // fiche : fiche existante (modification) ou undefined (création)
 export default function DefiscForm({ fiche }) {
@@ -85,21 +85,29 @@ export default function DefiscForm({ fiche }) {
     if (role === 'admin') data.statut_admin = f.statut_admin || null // statut admin : admin seulement
     if (role === 'admin') data.assigned_to = f.assigned_to || null
 
-    let error
+    const { data: { user } } = await supabase.auth.getUser()
+    let error, ficheId = fiche?.id
     if (fiche) ({ error } = await supabase.from('defisc_leads').update(data).eq('id', fiche.id))
     else {
-      const { data: { user } } = await supabase.auth.getUser()
-      ;({ error } = await supabase.from('defisc_leads').insert({ ...data, created_by: user.id }))
+      const res = await supabase.from('defisc_leads').insert({ ...data, created_by: user.id }).select('id').single()
+      error = res.error; ficheId = res.data?.id
+    }
+    if (error) { setBusy(false); return setMsg(`Erreur : ${error.message}`) }
+
+    // Commentaire retour : une nouvelle ligne d'historique (call center + admin)
+    const retour = String(f.retour ?? '').trim()
+    if (retour && ficheId && ['admin', 'call_center'].includes(role)) {
+      const { data: p } = await supabase.from('profiles').select('nom_complet').eq('id', user.id).single()
+      const { error: e2 } = await supabase.from('defisc_retours').insert({ fiche_id: ficheId, user_id: user.id, auteur_nom: p?.nom_complet ?? user.email, auteur_role: role, commentaire: retour })
+      if (e2) { setBusy(false); return setMsg(`Fiche enregistrée, mais le commentaire retour a échoué : ${e2.message}`) }
     }
     setBusy(false)
-    if (error) return setMsg(`Erreur : ${error.message}`)
     router.push('/defisc')
   }
 
   const v = (k) => fiche?.[k]
-  // Anciennes valeurs (« IMMO », « immo »…) rattachées à l'option correspondante ; toute autre valeur existante est conservée
-  const natureInit = NATURES.find((n) => n.toLowerCase() === String(v('nature') ?? '').trim().toLowerCase()) ?? v('nature') ?? ''
   return (
+    <>
     <form onSubmit={submit} className="space-y-8">
       <Section title="Contact">
         <label className="block">
@@ -123,14 +131,7 @@ export default function DefiscForm({ fiche }) {
         </label>
         <HeureSelect date={dateRdv} value={heure} onChange={setHeure} />
         <Field name="type_rdv" label="Type de RDV (Visio, présentiel…)" value={v('type_rdv')} />
-        <label className="block">
-          <span className="field-label">Nature</span>
-          <select name="nature" defaultValue={natureInit} className="inp">
-            <option value="">Choisir…</option>
-            {NATURES.map((n) => <option key={n} value={n}>{n}</option>)}
-            {natureInit && !NATURES.includes(natureInit) && <option value={natureInit}>{natureInit}</option>}
-          </select>
-        </label>
+        <Field name="nature" label="Nature (IMMO…)" value={v('nature')} />
         <Field name="lieu_rdv" label="Lieu" value={v('lieu_rdv')} />
         <label className="block">
           <span className="field-label">Statut call center</span>
@@ -158,17 +159,16 @@ export default function DefiscForm({ fiche }) {
         )}
       </Section>
 
-      <Section title="Suivi">
+      <Section>
         <label className="block sm:col-span-2">
           <span className="field-label">Commentaire</span>
           <textarea name="commentaire" rows={fiche ? 6 : 12} defaultValue={fiche ? (v('commentaire') ?? '') : COMMENTAIRE_MODELE} className="inp" />
         </label>
-        <Field name="verif" label="Vérif" value={v('verif')} />
-        <span className="hidden sm:block" />
         <label className="block sm:col-span-2">
           <span className="field-label">Notes</span>
           <textarea name="notes" rows={3} defaultValue={v('notes') ?? ''} className="inp" />
         </label>
+        {['admin', 'call_center'].includes(role) && <RetourDefisc ficheId={fiche?.id} role={role} inForm />}
       </Section>
 
       {msg && <p className="rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{msg}</p>}
@@ -177,5 +177,6 @@ export default function DefiscForm({ fiche }) {
         <button disabled={busy} className="btn-accent">{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
       </div>
     </form>
+    </>
   )
 }
