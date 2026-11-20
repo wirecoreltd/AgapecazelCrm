@@ -15,14 +15,14 @@ const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0
 const decaler = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d) }
 // Moment du RDV (date + heure). Sans heure : fin de journée.
 const momentRdv = (r) => (r.date_rdv ? new Date(`${r.date_rdv}T${r.heure_rdv ? r.heure_rdv.slice(0, 5) : '23:59'}:00`) : null)
-// Alerte : 'demain' / 'aujourdhui' (rouge, RDV pas encore atteint) · 'atteint' (orange, heure du RDV dépassée)
+// Alerte : 'demain' (rouge) · 'aujourdhui' (violet, RDV du jour pas encore atteint) · 'atteint' (orange, heure du RDV dépassée)
 const urgence = (r, now) => {
   if (!estActif(r) || !r.date_rdv) return null
   const m = momentRdv(r)
   if (m && now >= m) return 'atteint'
   return r.date_rdv === iso(now) ? 'aujourdhui' : r.date_rdv === decaler(1) ? 'demain' : null
 }
-const COULEUR_ALERTE = { demain: 'var(--danger)', aujourdhui: 'var(--danger)', atteint: '#d97706' }
+const COULEUR_ALERTE = { demain: 'var(--danger)', aujourdhui: '#7c3aed', atteint: '#d97706' }
 const LIBELLE_ALERTE = { demain: '⚠️ RDV demain', aujourdhui: "⚠️ RDV aujourd'hui", atteint: '⏰ Date de RDV atteinte' }
 const COLONNES = ['Date création', 'Civilité', 'Nom', 'Prénom', 'Nature', 'Date RDV', 'Heure RDV', 'Mobile', 'Fixe']
 const EXPORT_PERIODES = [['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['semaine', 'Cette semaine (depuis lundi)'], ['perso', 'Plage personnalisée']]
