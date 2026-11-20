@@ -231,7 +231,7 @@ export default function DefiscListe() {
 
   return (
     <AppShell wide title="Leads défiscalisation" subtitle={`${filtrees.length} fiche(s)`}
-      actions={<><Link href="/defisc/new" className="btn-accent">+ Nouvelle fiche</Link>{role === 'admin' && <Link href="/defisc/import" className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>Importer Excel</Link>}</>}>
+      actions={<><Link href="/defisc/new" className="btn-accent">+ Nouvelle fiche</Link>{role === 'admin' && <Link href="/defisc/import" className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>Importer Excel</Link>}{role === 'admin' && <Link href="/defisc/historique" className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>Historique</Link>}</>}>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher nom, téléphone, e-mail…" className="inp sm:max-w-xs" />
         <select value={periode} onChange={(e) => setPeriode(e.target.value)} className="inp sm:max-w-[200px]">
