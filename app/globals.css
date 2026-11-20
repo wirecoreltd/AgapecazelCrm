@@ -139,3 +139,7 @@ body { overflow-x: clip; }
   .rtable td:not([data-label])::before { display: none; }
   .rtable td:not([data-label]) { justify-content: flex-start; text-align: left; }
 }
+
+/* Barre de défilement masquée (le défilement reste possible, piloté par la barre du haut) */
+.sb-cache { scrollbar-width: none; }
+.sb-cache::-webkit-scrollbar { display: none; }
