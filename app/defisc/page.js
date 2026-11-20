@@ -296,6 +296,12 @@ export default function DefiscListe() {
                     <Meta label="Création">{fmtDateCreation(r.created_at)}</Meta>
                     <Meta label="RDV">{rdv}</Meta>
                     {par !== null && <Meta label="Créée par">{par}</Meta>}
+                    <Meta label="Statut">
+                      <span className="flex flex-wrap gap-1">
+                        <span className={PILL_CLS} style={{ background: STATUTS_CC[r.statut_cc]?.color ?? '#666' }}>{STATUTS_CC[r.statut_cc]?.label ?? r.statut_cc ?? '—'}</span>
+                        {r.statut_admin && <span className={PILL_CLS} style={{ background: STATUTS_ADMIN[r.statut_admin]?.color ?? '#666' }}>{STATUTS_ADMIN[r.statut_admin]?.label ?? r.statut_admin}</span>}
+                      </span>
+                    </Meta>
                   </dl>
                 </button>
               </div>
