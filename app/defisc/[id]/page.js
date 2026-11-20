@@ -25,7 +25,8 @@ export default function Fiche() {
   const verrouillee = fiche && role !== undefined && estVerrouillee(fiche, role)
 
   return (
-    <AppShell backHref="/defisc" title={titre}>
+    <AppShell backHref="/defisc" title={titre}
+      actions={fiche && !verrouillee && <Link href={`/defisc/${fiche.id}/details`} className="btn-ghost" style={{ border: '1px solid var(--border-strong)' }}>Voir la fiche</Link>}>
       {!fiche || role === undefined ? (
         <p style={{ color: 'var(--muted)' }}>{msg}</p>
       ) : verrouillee ? (
