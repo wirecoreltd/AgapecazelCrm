@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import RetourDefisc from '@/components/RetourDefisc'
 import { STATUTS_CC, STATUT_CC_KEYS, STATUTS_ADMIN, STATUT_ADMIN_KEYS, normFR, COMMENTAIRE_MODELE, estModeleVide } from '@/lib/defisc'
 
 function Field({ name, label, value, type = 'text', required, step }) {
@@ -46,6 +45,7 @@ function HeureSelect({ date, value, onChange }) {
     </label>
   )
 }
+const NATURES = ['Immo', 'Financier']
 const TEXTES = ['civilite', 'nom', 'prenom', 'email', 'type_rdv', 'nature', 'lieu_rdv', 'commentaire', 'verif', 'notes']
 
 // fiche : fiche existante (modification) ou undefined (création)
@@ -97,8 +97,9 @@ export default function DefiscForm({ fiche }) {
   }
 
   const v = (k) => fiche?.[k]
+  // Anciennes valeurs (« IMMO », « immo »…) rattachées à l'option correspondante ; toute autre valeur existante est conservée
+  const natureInit = NATURES.find((n) => n.toLowerCase() === String(v('nature') ?? '').trim().toLowerCase()) ?? v('nature') ?? ''
   return (
-    <>
     <form onSubmit={submit} className="space-y-8">
       <Section title="Contact">
         <label className="block">
@@ -122,7 +123,14 @@ export default function DefiscForm({ fiche }) {
         </label>
         <HeureSelect date={dateRdv} value={heure} onChange={setHeure} />
         <Field name="type_rdv" label="Type de RDV (Visio, présentiel…)" value={v('type_rdv')} />
-        <Field name="nature" label="Nature (IMMO…)" value={v('nature')} />
+        <label className="block">
+          <span className="field-label">Nature</span>
+          <select name="nature" defaultValue={natureInit} className="inp">
+            <option value="">Choisir…</option>
+            {NATURES.map((n) => <option key={n} value={n}>{n}</option>)}
+            {natureInit && !NATURES.includes(natureInit) && <option value={natureInit}>{natureInit}</option>}
+          </select>
+        </label>
         <Field name="lieu_rdv" label="Lieu" value={v('lieu_rdv')} />
         <label className="block">
           <span className="field-label">Statut call center</span>
@@ -169,10 +177,5 @@ export default function DefiscForm({ fiche }) {
         <button disabled={busy} className="btn-accent">{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
       </div>
     </form>
-    {/* Hors du <form> (il a son propre formulaire) ; seulement sur une fiche existante */}
-    {fiche && ['admin', 'call_center'].includes(role) && (
-      <div className="mt-8"><RetourDefisc ficheId={fiche.id} role={role} /></div>
-    )}
-    </>
   )
 }
