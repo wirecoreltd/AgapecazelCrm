@@ -50,7 +50,7 @@ export default function DetailsFiche() {
           <Bloc titre="Rendez-vous" lignes={[
             ['Date', date(f.date_rdv)], ['Heure', f.heure_rdv?.slice(0, 5)], ['Type', f.type_rdv],
             ['Nature', f.nature], ['Lieu', f.lieu_rdv], ['Vérif', f.verif]]} />
-          <Bloc titre="Suivi" lignes={[['Commentaire d\'origine', f.commentaire], ['Notes', f.notes]]} />
+          <lignes={[['Commentaire d\'origine', f.commentaire], ['Notes', f.notes]]} />
           {['admin', 'call_center'].includes(role) && <RetourDefisc ficheId={f.id} role={role} />}
         </div>
       )}
