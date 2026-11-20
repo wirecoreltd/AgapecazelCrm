@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
@@ -42,6 +42,32 @@ function Actions({ r, role, onDelete }) {
       {!estVerrouillee(r, role) && <Link href={`/defisc/${r.id}`} className="ico" title="Modifier" aria-label="Modifier">✏️</Link>}
       <Link href={`/defisc/${r.id}/details`} className="ico" title="Détails" aria-label="Détails">🔍</Link>
       {role === 'admin' && <button type="button" onClick={() => onDelete(r)} className="ico" title="Supprimer" aria-label="Supprimer">🗑️</button>}
+    </div>
+  )
+}
+
+// Tableau avec une 2e barre de défilement horizontale EN HAUT (collée sous l'en-tête du site), synchronisée avec celle du bas :
+// on peut défiler vers la droite sans descendre tout en bas de la liste.
+function TableauDefilant({ children }) {
+  const haut = useRef(null), bas = useRef(null)
+  const [largeur, setLargeur] = useState(0)
+  useEffect(() => {
+    const el = bas.current
+    if (!el) return
+    const maj = () => setLargeur(el.scrollWidth)
+    maj()
+    const ro = new ResizeObserver(maj)
+    ro.observe(el)
+    if (el.firstElementChild) ro.observe(el.firstElementChild)
+    return () => ro.disconnect()
+  }, [])
+  const sync = (de, vers) => () => { if (vers.current && vers.current.scrollLeft !== de.current.scrollLeft) vers.current.scrollLeft = de.current.scrollLeft }
+  return (
+    <div className="hidden sm:block">
+      <div ref={haut} onScroll={sync(haut, bas)} className="sticky z-20 overflow-x-auto overflow-y-hidden" style={{ top: 70, background: 'var(--surface)' }}>
+        <div style={{ width: largeur, height: 1 }} />
+      </div>
+      <div ref={bas} onScroll={sync(bas, haut)} className="card overflow-x-auto">{children}</div>
     </div>
   )
 }
@@ -332,10 +358,9 @@ export default function DefiscListe() {
       </div>
 
       {/* Tablette / ordinateur : tableau */}
-      {/* Zone à hauteur limitée : défilement vertical ET horizontal à l'intérieur, la barre horizontale reste donc toujours visible en bas de l'écran ; l'en-tête reste collé en haut */}
-      <div className="card hidden overflow-auto sm:block" style={{ maxHeight: 'calc(100vh - 190px)' }}>
+      <TableauDefilant>
         <table className="w-full text-left text-[13px]">
-          <thead className="sticky top-0 z-10" style={{ background: 'var(--surface)', boxShadow: '0 1px 0 var(--border)' }}>
+          <thead>
             <tr className="border-b text-[11px] uppercase tracking-wide" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>
               {role === 'admin' && <th className="px-3 py-2.5"><input type="checkbox" checked={toutCoche} onChange={toggleTout} aria-label="Tout cocher" /></th>}
               {COLONNES.map((h) => <th key={h} className="whitespace-nowrap px-3 py-2.5 font-medium">{h}</th>)}
@@ -379,7 +404,7 @@ export default function DefiscListe() {
             {loading && <tr><td colSpan={COLONNES.length + 5} className="px-3 py-8 text-center" style={{ color: 'var(--muted)' }}>Chargement…</td></tr>}
           </tbody>
         </table>
-      </div>
+      </TableauDefilant>
     </AppShell>
   )
 }
