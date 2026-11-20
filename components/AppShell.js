@@ -76,7 +76,7 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
   const items = (courant === 'defisc'
     ? [['/defisc', 'Leads'], ['/defisc/import', 'Import']]
     : [['/leads', 'Leads'], ['/appels', 'Appels'], ['/stats', 'Statistiques']]
-  ).concat([['/admin', 'Espace admin'], ['/logs', 'Historique']])
+  ).concat([['/admin', 'Espace admin'], [courant === 'defisc' ? '/defisc/historique' : '/logs', 'Historique']])
     .filter(([href]) => canAccess(role, href, modules))
   // Un seul lien actif : le plus précis (/defisc/import l'emporte sur /defisc)
   const actif = items.map(([h]) => h).filter((h) => pathname === h || pathname.startsWith(h + '/')).sort((a, b) => b.length - a.length)[0]
