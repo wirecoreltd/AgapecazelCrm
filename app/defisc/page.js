@@ -332,9 +332,10 @@ export default function DefiscListe() {
       </div>
 
       {/* Tablette / ordinateur : tableau */}
-      <div className="card hidden overflow-x-auto sm:block">
+      {/* Zone à hauteur limitée : défilement vertical ET horizontal à l'intérieur, la barre horizontale reste donc toujours visible en bas de l'écran ; l'en-tête reste collé en haut */}
+      <div className="card hidden overflow-auto sm:block" style={{ maxHeight: 'calc(100vh - 190px)' }}>
         <table className="w-full text-left text-[13px]">
-          <thead>
+          <thead className="sticky top-0 z-10" style={{ background: 'var(--surface)', boxShadow: '0 1px 0 var(--border)' }}>
             <tr className="border-b text-[11px] uppercase tracking-wide" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>
               {role === 'admin' && <th className="px-3 py-2.5"><input type="checkbox" checked={toutCoche} onChange={toggleTout} aria-label="Tout cocher" /></th>}
               {COLONNES.map((h) => <th key={h} className="whitespace-nowrap px-3 py-2.5 font-medium">{h}</th>)}
