@@ -66,8 +66,16 @@ export default function DefiscForm({ fiche }) {
     const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
     setRole(p?.role ?? null)
     if (p?.role === 'admin') {
-      const { data } = await supabase.from('profiles').select('id, nom_complet').in('role', ['agent', 'call_center']).order('nom_complet')
-      setConseillers(data ?? [])
+      // Les utilisateurs bloqués ne sont pas proposés
+      const { data } = await supabase.from('profiles').select('id, nom_complet').in('role', ['agent', 'call_center']).or('bloque.is.null,bloque.eq.false').order('nom_complet')
+      const liste = data ?? []
+      // Fiche déjà assignée à quelqu'un de bloqué : on le garde (marqué « bloqué ») pour ne pas perdre l'assignation à l'enregistrement
+      const actuel = fiche?.assigned_to
+      if (actuel && !liste.some((c) => c.id === actuel)) {
+        const { data: b } = await supabase.from('profiles').select('id, nom_complet').eq('id', actuel).single()
+        if (b) liste.push({ id: b.id, nom_complet: `${b.nom_complet} (bloqué)` })
+      }
+      setConseillers(liste)
     }
   })() }, [])
 
