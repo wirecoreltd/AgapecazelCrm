@@ -24,7 +24,7 @@ const urgence = (r, now) => {
 }
 const COULEUR_ALERTE = { demain: 'var(--danger)', aujourdhui: 'var(--danger)', atteint: '#d97706' }
 const LIBELLE_ALERTE = { demain: '⚠️ RDV demain', aujourdhui: "⚠️ RDV aujourd'hui", atteint: '⏰ Date de RDV atteinte' }
-const COLONNES = ['Date création', 'Civilité', 'Nom', 'Prénom', 'Type RDV', 'Nature', 'Date RDV', 'Heure RDV', 'Lieu RDV', 'Mobile', 'Fixe', 'E-mail']
+const COLONNES = ['Date création', 'Civilité', 'Nom', 'Prénom', 'Nature', 'Date RDV', 'Heure RDV', 'Mobile', 'Fixe']
 const EXPORT_PERIODES = [['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['semaine', 'Cette semaine (depuis lundi)'], ['perso', 'Plage personnalisée']]
 const PERIODES = [['tous', 'Toutes les dates'], ['aujourdhui', "Aujourd'hui"], ['semaine', 'Cette semaine']]
 
@@ -67,7 +67,7 @@ function TableauDefilant({ children }) {
       <div ref={haut} onScroll={sync(haut, bas)} className="sticky z-20 overflow-x-auto overflow-y-hidden" style={{ top: 70, background: 'var(--surface)' }}>
         <div style={{ width: largeur, height: 1 }} />
       </div>
-      <div ref={bas} onScroll={sync(bas, haut)} className="card overflow-x-auto">{children}</div>
+      <div ref={bas} onScroll={sync(bas, haut)} className="card sb-cache overflow-x-auto">{children}</div>
     </div>
   )
 }
@@ -334,12 +334,9 @@ export default function DefiscListe() {
               {ouvert && (
                 <div className="border-t px-4 pb-3 pt-3" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
                   <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-2">
-                    <Meta label="Type RDV">{r.type_rdv}</Meta>
                     <Meta label="Nature">{r.nature}</Meta>
-                    <Meta label="Lieu">{r.lieu_rdv}</Meta>
                     <Meta label="Mobile">{r.mobile && <a href={`tel:${r.mobile}`} className="underline">{r.mobile}</a>}</Meta>
                     <Meta label="Fixe">{r.fixe && <a href={`tel:${r.fixe}`} className="underline">{r.fixe}</a>}</Meta>
-                    <div className="col-span-2"><Meta label="E-mail">{r.email && <a href={`mailto:${r.email}`} className="underline">{r.email}</a>}</Meta></div>
                   </dl>
                   <div className="flex items-center justify-end gap-3">
                     <Actions r={r} role={role} onDelete={supprimer} />
@@ -385,14 +382,11 @@ export default function DefiscListe() {
                   <td className="px-3 py-2.5">{r.civilite ?? '—'}</td>
                   <td className="px-3 py-2.5"><Link href={estVerrouillee(r, role) ? `/defisc/${r.id}/details` : `/defisc/${r.id}`} className="font-medium underline-offset-2 hover:underline">{r.nom ?? '—'}</Link></td>
                   <td className="px-3 py-2.5">{r.prenom ?? '—'}</td>
-                  <td className="px-3 py-2.5">{r.type_rdv ?? '—'}</td>
                   <td className="px-3 py-2.5">{r.nature ?? '—'}</td>
                   <td className="whitespace-nowrap px-3 py-2.5 font-medium">{fmtDate(r.date_rdv)}</td>
                   <td className="px-3 py-2.5">{r.heure_rdv?.slice(0, 5) ?? '—'}</td>
-                  <td className="px-3 py-2.5">{r.lieu_rdv ?? '—'}</td>
                   <td className="whitespace-nowrap px-3 py-2.5">{r.mobile ?? '—'}</td>
                   <td className="whitespace-nowrap px-3 py-2.5">{r.fixe ?? '—'}</td>
-                  <td className="px-3 py-2.5">{r.email ?? '—'}</td>
                   {role === 'admin' && <td className="whitespace-nowrap px-3 py-2.5 font-medium">{createurs[r.created_by] ?? (r.fichier ? 'Import Excel' : '—')}</td>}
                   <td className="min-w-[130px] px-3 py-2.5"><StatutCC r={r} role={role} onChange={changerStatut} /></td>
                   <td className="min-w-[130px] px-3 py-2.5"><StatutAdmin r={r} role={role} onChange={changerStatut} /></td>
