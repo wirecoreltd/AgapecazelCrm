@@ -206,8 +206,8 @@ export default function DefiscListe() {
     const today = iso(new Date())
     const fin = new Date(); fin.setDate(fin.getDate() + (7 - (fin.getDay() || 7))) // dimanche
     const needle = q.trim().toLowerCase().replace(/\s/g, '')
-    // Tri : RDV à venir du plus proche au plus lointain, puis RDV passés (le plus récent d'abord), puis sans date
-    const rang = (r) => { const m = momentRdv(r); return !m ? [2, 0] : m >= now ? [0, m.getTime()] : [1, -m.getTime()] }
+    // Tri PAR JOUR : aujourd'hui + à venir (le plus proche d'abord, puis par heure), puis jours passés (le plus récent d'abord), puis sans date
+    const rang = (r) => { const m = momentRdv(r); return !m ? [2, 0] : r.date_rdv >= today ? [0, m.getTime()] : [1, -m.getTime()] }
     return rows.filter((r) => {
       if (statuts.length && !statuts.some((k) => matchFiltre(r, k))) return false
       if (createur && r.created_by !== createur) return false
