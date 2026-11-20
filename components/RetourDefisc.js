@@ -4,7 +4,8 @@ import { supabase } from '@/lib/supabase'
 import { roleLabel } from '@/lib/roles'
 
 // Historique des commentaires retour d'une fiche Défisc (call center + admin uniquement)
-export default function RetourDefisc({ ficheId, role }) {
+// inForm : champ à l'intérieur du formulaire de la fiche (texte envoyé par le bouton Enregistrer) + historique en dessous
+export default function RetourDefisc({ ficheId, role, inForm = false }) {
   const [retours, setRetours] = useState([])
   const [texte, setTexte] = useState('')
   const [busy, setBusy] = useState(false)
@@ -16,7 +17,7 @@ export default function RetourDefisc({ ficheId, role }) {
     if (error) setErr(error.message)
     setRetours(data ?? [])
   }
-  useEffect(() => { (async () => {
+  useEffect(() => { if (!ficheId) return; (async () => {
     const { data: { user } } = await supabase.auth.getUser()
     setMoi(user?.id ?? null)
     load()
@@ -45,16 +46,20 @@ export default function RetourDefisc({ ficheId, role }) {
   }
 
   return (
-    <div className="card p-4 sm:p-6 lg:col-span-2">
-      <h2 className="section-heading mb-3">Commentaire retour</h2>
+    <div className={inForm ? 'sm:col-span-2' : 'card p-4 sm:p-6 lg:col-span-2'}>
+      {inForm ? <span className="field-label">Commentaire retour</span> : <h2 className="section-heading mb-3">Commentaire retour</h2>}
       {err && <p className="mb-3 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>{err}</p>}
 
-      <form onSubmit={ajouter} className="mb-4 flex flex-col gap-2">
-        <textarea value={texte} onChange={(e) => setTexte(e.target.value)} rows={3} placeholder="Écrire un commentaire retour…" className="inp" />
-        <div className="flex justify-end">
-          <button disabled={busy || !texte.trim()} className="btn-accent">{busy ? 'Envoi…' : 'Ajouter le commentaire'}</button>
-        </div>
-      </form>
+      {inForm ? (
+        <textarea name="retour" rows={3} placeholder="Écrire un commentaire retour… (enregistré avec le bouton Enregistrer)" className="inp mb-4" />
+      ) : (
+        <form onSubmit={ajouter} className="mb-4 flex flex-col gap-2">
+          <textarea value={texte} onChange={(e) => setTexte(e.target.value)} rows={3} placeholder="Écrire un commentaire retour…" className="inp" />
+          <div className="flex justify-end">
+            <button disabled={busy || !texte.trim()} className="btn-accent">{busy ? 'Envoi…' : 'Ajouter le commentaire'}</button>
+          </div>
+        </form>
+      )}
 
       <ul className="flex flex-col gap-2">
         {retours.map((r) => (
