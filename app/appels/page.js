@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
+import { useSyncedState, useLiveRefresh } from '@/lib/sync'
 
 const fmtDate = (v) => new Date(v).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
 const fmtDuree = (s) => (s == null ? '—' : `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, '0')} s`)
@@ -41,17 +42,17 @@ export default function Appels() {
   const [agents, setAgents] = useState({})
   const [leads, setLeads] = useState({})
   const [inconnus, setInconnus] = useState([])
-  const [recherche, setRecherche] = useState('')
-  const [filtreTypes, setFiltreTypes] = useState([])      // choix multiple ; vide = tous les types
+  const [recherche, setRecherche] = useSyncedState('appels.recherche', '')
+  const [filtreTypes, setFiltreTypes] = useSyncedState('appels.types', [])      // choix multiple ; vide = tous les types
   const [typeOuvert, setTypeOuvert] = useState(false)
-  const [filtreJour, setFiltreJour] = useState('tous')     // tous | aujourdhui | hier | perso
-  const [dateDebut, setDateDebut] = useState('')           // AAAA-MM-JJ (période personnalisée)
-  const [dateFin, setDateFin] = useState('')
-  const [filtrePersonne, setFiltrePersonne] = useState('tous') // 'tous' ou id de l'agent
-  const [filtreDuree, setFiltreDuree] = useState('toutes') // toutes | moins1 | moins5 | plus5
+  const [filtreJour, setFiltreJour] = useSyncedState('appels.jour', 'tous')     // tous | aujourdhui | hier | perso
+  const [dateDebut, setDateDebut] = useSyncedState('appels.debut', '')           // AAAA-MM-JJ (période personnalisée)
+  const [dateFin, setDateFin] = useSyncedState('appels.fin', '')
+  const [filtrePersonne, setFiltrePersonne] = useSyncedState('appels.personne', 'tous') // 'tous' ou id de l'agent
+  const [filtreDuree, setFiltreDuree] = useSyncedState('appels.duree', 'toutes') // toutes | moins1 | moins5 | plus5
   const [err, setErr] = useState('')
 
-  useEffect(() => { (async () => {
+  const load = async () => {
     // RLS : l'admin voit tout, un agent voit ses propres appels
     const { data: a, error } = await supabase.from('lead_appels').select('*').order('created_at', { ascending: false }).limit(500)
     if (error) setErr(error.message)
@@ -65,7 +66,9 @@ export default function Appels() {
       const { data: l } = await supabase.from('leads').select('id, nom, prenom, mobile, telephone_1').in('id', ids)
       setLeads(Object.fromEntries((l ?? []).map((x) => [x.id, x])))
     }
-  })() }, [])
+  }
+  useEffect(() => { load() }, [])
+  useLiveRefresh(['lead_appels', 'leads'], load)
 
   // Prépare la fiche : infos de l'annuaire + historique des appels, puis ouvre le formulaire de création
   const inserer = async (r) => {
