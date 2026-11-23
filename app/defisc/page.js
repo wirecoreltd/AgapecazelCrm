@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
+import { useSyncedState, useLiveRefresh } from '@/lib/sync'
 import { STATUTS_CC, STATUT_CC_KEYS, STATUTS_ADMIN, STATUT_ADMIN_KEYS, estVerrouillee, peutChangerStatutCC, estActif } from '@/lib/defisc'
 
 const fmtDateCreation = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—')
@@ -151,12 +152,12 @@ export default function DefiscListe() {
   const [now, setNow] = useState(() => new Date()) // rafraîchi chaque minute : la couleur change dès que l'heure du RDV est atteinte
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(t) }, [])
   const [createurs, setCreateurs] = useState({}) // id -> nom, pour « Créée par »
-  const [createur, setCreateur] = useState('')
+  const [createur, setCreateur] = useSyncedState('defisc.createur', '')
   const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [q, setQ] = useState('')
-  const [statuts, setStatuts] = useState([])
-  const [periode, setPeriode] = useState('tous')
+  const [q, setQ] = useSyncedState('defisc.q', '') // filtres synchronisés entre appareils
+  const [statuts, setStatuts] = useSyncedState('defisc.statuts', [])
+  const [periode, setPeriode] = useSyncedState('defisc.periode', 'tous')
   const [err, setErr] = useState('')
   const [sel, setSel] = useState(new Set()) // fiches cochées
   const [ouverts, setOuverts] = useState(new Set()) // cartes mobiles dépliées
@@ -181,6 +182,7 @@ export default function DefiscListe() {
     }
     load()
   })() }, [])
+  useLiveRefresh(['defisc_leads'], load)
 
   // champ : 'statut_cc' ou 'statut_admin'
   const changerStatut = async (id, champ, valeur) => {
