@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { canAccess, modulesOf, moduleOf, MODULES } from '@/lib/roles'
+import { useSyncedState, useLiveRefresh } from '@/lib/sync'
 
 function Logo() {
   // Le logo doit être dans /public/logo.png
@@ -41,30 +42,33 @@ export default function AppShell({ title, subtitle, backHref, backLabel = 'Retou
   const [modules, setModules] = useState([])
   const [switchOpen, setSwitchOpen] = useState(false)
   // CRM courant : celui de la page ; sur les pages communes (admin, historique) on garde le dernier utilisé
-  const [dernier, setDernier] = useState('pac')
-  const courant = moduleOf(pathname) ?? dernier
+  // Synchronisé entre appareils (table user_prefs)
+  const [dernier, setDernier] = useSyncedState('dernier_module', 'pac')
+  const courant = moduleOf(pathname) ?? (MODULES[dernier] ? dernier : 'pac')
   useEffect(() => {
     const m = moduleOf(pathname)
-    if (m) { try { localStorage.setItem('dernier_module', m) } catch {} ; setDernier(m); return }
-    try { const d = localStorage.getItem('dernier_module'); if (d && MODULES[d]) setDernier(d) } catch {}
-  }, [pathname])
+    if (m) setDernier(m)
+  }, [pathname, setDernier])
 
-  useEffect(() => {
-    ;(async () => {
-      const { data: { user }, error: userErr } = await supabase.auth.getUser()
-      if (userErr) { console.error('AppShell auth.getUser error:', userErr); return }
-      if (!user) return
-      const { data: p, error: profileErr } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      if (profileErr) { console.error('AppShell profiles fetch error:', profileErr); return }
-      setRole(p?.role ?? null)
-      setModules(modulesOf(p?.role, p?.modules))
-      setNom(p?.nom_complet || user.email || '')
-    })()
-  }, [])
+  const chargerProfil = async () => {
+    const { data: { user }, error: userErr } = await supabase.auth.getUser()
+    if (userErr) { console.error('AppShell auth.getUser error:', userErr); return }
+    if (!user) return
+    const { data: p, error: profileErr } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    if (profileErr) { console.error('AppShell profiles fetch error:', profileErr); return }
+    // Compte bloqué depuis un autre appareil / par l'admin : déconnexion immédiate
+    if (p?.bloque) { await supabase.auth.signOut(); window.location.href = '/login?bloque=1'; return }
+    setRole(p?.role ?? null)
+    setModules(modulesOf(p?.role, p?.modules))
+    setNom(p?.nom_complet || user.email || '')
+  }
+  useEffect(() => { chargerProfil() }, [])
+  // Rôle, modules ou blocage modifiés (par l'admin ou depuis un autre appareil) : mise à jour en direct
+  useLiveRefresh(['profiles'], chargerProfil)
 
   const logout = async () => {
     await supabase.auth.signOut()
