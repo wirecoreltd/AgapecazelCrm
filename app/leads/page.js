@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
 import StatusBadge from '@/components/StatusBadge'
+import { useSyncedState, useLiveRefresh } from '@/lib/sync'
 
 const STATUTS = ['nouveau', 'installation_programmee', 'installe', 'annule', 'perdu', 'retraiter', 'pas_interesse']
 const STATUT_LABELS = { nouveau: 'Nouveau', installation_programmee: 'Installation Programmée', installe: 'Installé', pas_interesse: 'Client Pas Intéressé', retraiter: 'A Retraité',annule: 'Annulé',perdu: 'Perdu' }
@@ -128,8 +129,8 @@ export default function Leads() {
   const [agentsMap, setAgentsMap] = useState({})
   const [derniersAppels, setDerniersAppels] = useState({})
   const [docCounts, setDocCounts] = useState({})
-  const [filtres, setFiltres] = useState([]) // multi-sélection ; vide = tous
-  const [recherche, setRecherche] = useState('')
+  const [filtres, setFiltres] = useSyncedState('leads.filtres', []) // multi-sélection ; vide = tous (synchronisé entre appareils)
+  const [recherche, setRecherche] = useSyncedState('leads.recherche', '')
   const [err, setErr] = useState('')
   const [uploadingId, setUploadingId] = useState(null)
   const [nbImport, setNbImport] = useState(0)
@@ -163,6 +164,8 @@ export default function Leads() {
     setNbImport(count ?? 0)
   }
   useEffect(() => { load() }, [])
+  // Tout changement (autre appareil, autre utilisateur) met la liste à jour automatiquement
+  useLiveRefresh(['leads', 'lead_appels', 'lead_documents', 'leads_import'], load)
 
   const maj = async (id, patch) => {
     setErr('')
