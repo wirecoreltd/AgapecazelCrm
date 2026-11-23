@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { MODULES, modulesOf } from '@/lib/roles'
+import { useSyncedState } from '@/lib/sync'
 
 // Écran affiché après la connexion :
 // - un seul CRM autorisé : redirection directe
@@ -12,7 +13,7 @@ import { MODULES, modulesOf } from '@/lib/roles'
 export default function Choix() {
   const router = useRouter()
   const [mods, setMods] = useState(null)
-  const [dernier, setDernier] = useState(null)
+  const [dernier, setDernier] = useSyncedState('dernier_module', null) // synchronisé entre appareils
 
   useEffect(() => { (async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -20,7 +21,6 @@ export default function Choix() {
     const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     const m = modulesOf(p?.role, p?.modules)
     if (m.length === 1) return router.replace(MODULES[m[0]].home)
-    try { setDernier(localStorage.getItem('dernier_module')) } catch {}
     setMods(m)
   })() }, [router])
 
@@ -45,7 +45,7 @@ export default function Choix() {
             <p className="mb-4 text-center text-sm text-white/70">Quel CRM souhaitez-vous utiliser ?</p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {mods.map((k) => (
-                <button key={k} onClick={() => { try { localStorage.setItem('dernier_module', k) } catch {} ; router.push(MODULES[k].home) }}
+                <button key={k} onClick={() => { setDernier(k); router.push(MODULES[k].home) }}
                   className="card p-6 text-left transition-shadow hover:shadow-lg"
                   style={k === dernier ? { outline: '2px solid var(--accent)' } : undefined}>
                   <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>{MODULES[k].label}</p>
