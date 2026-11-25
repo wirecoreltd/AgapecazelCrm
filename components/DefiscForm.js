@@ -23,6 +23,18 @@ function Section({ title, children }) {
     </div>
   )
 }
+// Bloc de statut mis en évidence (couleur du statut choisi) pour le distinguer des autres champs
+function BlocStatut({ titre, couleur, children }) {
+  return (
+    <div className="rounded-xl p-4" style={{ background: `${couleur}14`, borderLeft: `5px solid ${couleur}` }}>
+      <span className="field-label">{titre}</span>
+      {children}
+    </div>
+  )
+}
+const SELECT_COULEUR = 'w-full rounded-lg border-0 px-3 py-2.5 text-[14px] font-semibold text-white'
+const OPT = { color: '#1e293b', background: '#fff' }
+
 // Seuls les champs affichés dans le formulaire sont envoyés : le profil financier (importé) n'est jamais écrasé
 // Heures par tranche de 15 min, jusqu'à 21:00 : à partir de 08:00, sauf le MARDI où l'on commence à 12:00
 const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
@@ -56,6 +68,8 @@ export default function DefiscForm({ fiche }) {
   const [busy, setBusy] = useState(false)
   const [role, setRole] = useState(null)
   const [conseillers, setConseillers] = useState([])
+  const [statutCC, setStatutCC] = useState(fiche?.statut_cc ?? 'a_confirmer')
+  const [statutAdmin, setStatutAdmin] = useState(fiche?.statut_admin ?? '')
   const [dateRdv, setDateRdv] = useState(fiche?.date_rdv ?? '')
   const [heure, setHeure] = useState(fiche?.heure_rdv?.slice(0, 5) ?? '')
   // Changement de date : si l'heure choisie n'existe pas ce jour-là (ex. matin un mardi), on la vide
@@ -118,6 +132,25 @@ export default function DefiscForm({ fiche }) {
   return (
     <>
     <form onSubmit={submit} className="space-y-8">
+      {(role === 'admin' || fiche) && (
+        <BlocStatut titre="Statut administrateur" couleur={STATUTS_ADMIN[statutAdmin]?.color ?? '#94a3b8'}>
+          {role === 'admin' ? (
+            <select name="statut_admin" value={statutAdmin} onChange={(e) => setStatutAdmin(e.target.value)} className={SELECT_COULEUR}
+              style={{ background: STATUTS_ADMIN[statutAdmin]?.color ?? '#64748b', colorScheme: 'light' }}>
+              <option value="" style={OPT}>—</option>
+              {STATUT_ADMIN_KEYS.map((k) => <option key={k} value={k} style={OPT}>{STATUTS_ADMIN[k].label}</option>)}
+            </select>
+          ) : (
+            // Agent / call center : visible mais jamais modifiable (aussi bloqué côté base de données)
+            <div className="pt-1.5">
+              {fiche?.statut_admin
+                ? <span className="inline-block rounded-lg px-3 py-2 text-[14px] font-semibold text-white" style={{ background: STATUTS_ADMIN[fiche.statut_admin]?.color ?? '#666' }}>{STATUTS_ADMIN[fiche.statut_admin]?.label ?? fiche.statut_admin}</span>
+                : <span style={{ color: 'var(--muted)' }}>—</span>}
+            </div>
+          )}
+        </BlocStatut>
+      )}
+
       <Section title="Contact">
         <label className="block">
           <span className="field-label">Civilité</span>
@@ -142,31 +175,6 @@ export default function DefiscForm({ fiche }) {
         <Field name="type_rdv" label="Type de RDV (Visio, présentiel…)" value={v('type_rdv')} />
         <Field name="nature" label="Nature (IMMO…)" value={v('nature')} />
         <Field name="lieu_rdv" label="Lieu" value={v('lieu_rdv')} />
-        <label className="block">
-          <span className="field-label">Statut call center</span>
-          <select name="statut_cc" defaultValue={v('statut_cc') ?? 'a_confirmer'} className="inp">
-            {STATUT_CC_KEYS.map((k) => <option key={k} value={k}>{STATUTS_CC[k].label}</option>)}
-          </select>
-        </label>
-        {role === 'admin' ? (
-          <label className="block">
-            <span className="field-label">Statut administrateur</span>
-            <select name="statut_admin" defaultValue={v('statut_admin') ?? ''} className="inp">
-              <option value="">—</option>
-              {STATUT_ADMIN_KEYS.map((k) => <option key={k} value={k}>{STATUTS_ADMIN[k].label}</option>)}
-            </select>
-          </label>
-        ) : fiche && (
-          // Agent / call center : le statut admin est visible mais jamais modifiable (aussi bloqué côté base de données)
-          <div className="block">
-            <span className="field-label">Statut administrateur</span>
-            <div className="pt-1.5">
-              {fiche.statut_admin
-                ? <span className="inline-block rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS_ADMIN[fiche.statut_admin]?.color ?? '#666' }}>{STATUTS_ADMIN[fiche.statut_admin]?.label ?? fiche.statut_admin}</span>
-                : <span style={{ color: 'var(--muted)' }}>—</span>}
-            </div>
-          </div>
-        )}
         {role === 'admin' && (
           <label className="block">
             <span className="field-label">Conseiller</span>
@@ -177,6 +185,13 @@ export default function DefiscForm({ fiche }) {
           </label>
         )}
       </Section>
+
+      <BlocStatut titre="Statut call center" couleur={STATUTS_CC[statutCC]?.color ?? '#64748b'}>
+        <select name="statut_cc" value={statutCC} onChange={(e) => setStatutCC(e.target.value)} className={SELECT_COULEUR}
+          style={{ background: STATUTS_CC[statutCC]?.color ?? '#64748b', colorScheme: 'light' }}>
+          {STATUT_CC_KEYS.map((k) => <option key={k} value={k} style={OPT}>{STATUTS_CC[k].label}</option>)}
+        </select>
+      </BlocStatut>
 
       {fiche && <HistoriqueStatuts ficheId={fiche.id} inForm />}
 
