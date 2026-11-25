@@ -26,13 +26,13 @@ function Section({ title, children }) {
 // Bloc de statut mis en évidence (couleur du statut choisi) pour le distinguer des autres champs
 function BlocStatut({ titre, couleur, children }) {
   return (
-    <div className="rounded-xl p-4" style={{ background: `${couleur}14`, borderLeft: `5px solid ${couleur}` }}>
+    <div className="rounded-xl px-3 py-2" style={{ background: `${couleur}14`, borderLeft: `5px solid ${couleur}` }}>
       <span className="field-label">{titre}</span>
       {children}
     </div>
   )
 }
-const SELECT_COULEUR = 'w-full rounded-lg border-0 px-3 py-2.5 text-[14px] font-semibold text-white'
+const SELECT_COULEUR = 'w-full rounded-lg border-0 px-2.5 py-1.5 text-[13px] font-semibold text-white'
 const OPT = { color: '#1e293b', background: '#fff' }
 
 // Seuls les champs affichés dans le formulaire sont envoyés : le profil financier (importé) n'est jamais écrasé
@@ -131,7 +131,7 @@ export default function DefiscForm({ fiche }) {
   const v = (k) => fiche?.[k]
   return (
     <>
-    <form onSubmit={submit} className="space-y-8">
+    <form onSubmit={submit} className="space-y-5">
       {(role === 'admin' || fiche) && (
         <BlocStatut titre="Statut administrateur" couleur={STATUTS_ADMIN[statutAdmin]?.color ?? '#94a3b8'}>
           {role === 'admin' ? (
@@ -142,9 +142,9 @@ export default function DefiscForm({ fiche }) {
             </select>
           ) : (
             // Agent / call center : visible mais jamais modifiable (aussi bloqué côté base de données)
-            <div className="pt-1.5">
+            <div>
               {fiche?.statut_admin
-                ? <span className="inline-block rounded-lg px-3 py-2 text-[14px] font-semibold text-white" style={{ background: STATUTS_ADMIN[fiche.statut_admin]?.color ?? '#666' }}>{STATUTS_ADMIN[fiche.statut_admin]?.label ?? fiche.statut_admin}</span>
+                ? <span className="inline-block rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-white" style={{ background: STATUTS_ADMIN[fiche.statut_admin]?.color ?? '#666' }}>{STATUTS_ADMIN[fiche.statut_admin]?.label ?? fiche.statut_admin}</span>
                 : <span style={{ color: 'var(--muted)' }}>—</span>}
             </div>
           )}
