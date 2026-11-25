@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import RetourDefisc from '@/components/RetourDefisc'
+import HistoriqueStatuts from '@/components/HistoriqueStatuts'
 import { STATUTS_CC, STATUT_CC_KEYS, STATUTS_ADMIN, STATUT_ADMIN_KEYS, normFR, COMMENTAIRE_MODELE, estModeleVide } from '@/lib/defisc'
 
 function Field({ name, label, value, type = 'text', required, step }) {
@@ -147,7 +148,7 @@ export default function DefiscForm({ fiche }) {
             {STATUT_CC_KEYS.map((k) => <option key={k} value={k}>{STATUTS_CC[k].label}</option>)}
           </select>
         </label>
-        {role === 'admin' && (
+        {role === 'admin' ? (
           <label className="block">
             <span className="field-label">Statut administrateur</span>
             <select name="statut_admin" defaultValue={v('statut_admin') ?? ''} className="inp">
@@ -155,6 +156,16 @@ export default function DefiscForm({ fiche }) {
               {STATUT_ADMIN_KEYS.map((k) => <option key={k} value={k}>{STATUTS_ADMIN[k].label}</option>)}
             </select>
           </label>
+        ) : fiche && (
+          // Agent / call center : le statut admin est visible mais jamais modifiable (aussi bloqué côté base de données)
+          <div className="block">
+            <span className="field-label">Statut administrateur</span>
+            <div className="pt-1.5">
+              {fiche.statut_admin
+                ? <span className="inline-block rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-white" style={{ background: STATUTS_ADMIN[fiche.statut_admin]?.color ?? '#666' }}>{STATUTS_ADMIN[fiche.statut_admin]?.label ?? fiche.statut_admin}</span>
+                : <span style={{ color: 'var(--muted)' }}>—</span>}
+            </div>
+          </div>
         )}
         {role === 'admin' && (
           <label className="block">
@@ -166,6 +177,8 @@ export default function DefiscForm({ fiche }) {
           </label>
         )}
       </Section>
+
+      {fiche && <HistoriqueStatuts ficheId={fiche.id} inForm />}
 
       <Section>
         <label className="block sm:col-span-2">
