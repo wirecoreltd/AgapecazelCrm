@@ -73,19 +73,19 @@ function TableauDefilant({ children }) {
   )
 }
 
-const PILL_CLS = 'inline-block rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-white'
+const PILL_CLS = 'inline-block text-[13px] font-semibold'
 
 // Statuts en texte (pastilles) : la modification se fait dans le formulaire d'édition de la fiche
 function StatutCC({ r }) {
   const def = STATUTS_CC[r.statut_cc]
   return r.statut_cc
-    ? <span className={PILL_CLS} style={{ background: def?.color ?? '#666' }}>{def?.label ?? r.statut_cc}</span>
+    ? <span className={PILL_CLS} style={{ color: def?.color ?? '#666' }}>{def?.label ?? r.statut_cc}</span>
     : <span style={{ color: 'var(--muted)' }}>—</span>
 }
 function StatutAdmin({ r }) {
   const def = STATUTS_ADMIN[r.statut_admin]
   return r.statut_admin
-    ? <span className={PILL_CLS} style={{ background: def?.color ?? '#666' }}>{def?.label ?? r.statut_admin}</span>
+    ? <span className={PILL_CLS} style={{ color: def?.color ?? '#666' }}>{def?.label ?? r.statut_admin}</span>
     : <span style={{ color: 'var(--muted)' }}>—</span>
 }
 
@@ -304,8 +304,8 @@ export default function DefiscListe() {
                     {par !== null && <Meta label="Créée par">{par}</Meta>}
                     <Meta label="Statut">
                       <span className="flex flex-wrap gap-1">
-                        <span className={PILL_CLS} style={{ background: STATUTS_CC[r.statut_cc]?.color ?? '#666' }}>{STATUTS_CC[r.statut_cc]?.label ?? r.statut_cc ?? '—'}</span>
-                        {r.statut_admin && <span className={PILL_CLS} style={{ background: STATUTS_ADMIN[r.statut_admin]?.color ?? '#666' }}>{STATUTS_ADMIN[r.statut_admin]?.label ?? r.statut_admin}</span>}
+                        <span className={PILL_CLS} style={{ color: STATUTS_CC[r.statut_cc]?.color ?? '#666' }}>{STATUTS_CC[r.statut_cc]?.label ?? r.statut_cc ?? '—'}</span>
+                        {r.statut_admin && <span className={PILL_CLS} style={{ color: STATUTS_ADMIN[r.statut_admin]?.color ?? '#666' }}>{STATUTS_ADMIN[r.statut_admin]?.label ?? r.statut_admin}</span>}
                       </span>
                     </Meta>
                   </dl>
