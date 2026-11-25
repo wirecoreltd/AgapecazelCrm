@@ -26,13 +26,13 @@ function Section({ title, children }) {
 // Bloc de statut mis en évidence (couleur du statut choisi) pour le distinguer des autres champs
 function BlocStatut({ titre, couleur, children }) {
   return (
-    <div className="rounded-xl px-3 py-2" style={{ background: `${couleur}14`, borderLeft: `5px solid ${couleur}` }}>
+    <div className="w-fit rounded-xl px-3 py-2" style={{ background: `${couleur}14`, borderLeft: `5px solid ${couleur}` }}>
       <span className="field-label">{titre}</span>
       {children}
     </div>
   )
 }
-const SELECT_COULEUR = 'w-full rounded-lg border-0 px-2.5 py-1.5 text-[13px] font-semibold text-white'
+const SELECT_COULEUR = 'mt-1 block w-44 rounded-lg border-0 px-2.5 py-1.5 text-[13px] font-semibold text-white'
 const OPT = { color: '#1e293b', background: '#fff' }
 
 // Seuls les champs affichés dans le formulaire sont envoyés : le profil financier (importé) n'est jamais écrasé
